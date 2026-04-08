@@ -416,7 +416,7 @@ export default function App() {
           </p>
           <div style={{ height: '400px', overflowY: 'auto', paddingRight: '8px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--surface)' }}>
             {[...assets].sort((a, b) => a.sector.localeCompare(b.sector) || a.name.localeCompare(b.name)).map(item => (
-              <div key={item.id} className="report-item" style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)', margin: 0, padding: '12px', borderRadius: 0, border: 'none', borderBottom: '1px solid var(--glass-border)' }} onClick={() => setSelectedAsset(item)}>
+              <div key={item.id} className="report-item" style={{ cursor: 'pointer', margin: 0, padding: '12px', borderRadius: 0, borderBottom: '1px solid var(--glass-border)' }} onClick={() => setSelectedAsset(item)}>
                 <div className="report-item-header">
                   <span className="report-item-name">{item.name.substring(0, 45)}{item.name.length > 45 ? '...' : ''}</span>
                   <span className="report-item-id">#{item.id}</span>
