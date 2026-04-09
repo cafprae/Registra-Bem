@@ -4,59 +4,85 @@ import {
   History, Plus, ClipboardList, Download, ArrowRightLeft,
   X, Clock, Database, List, AlertTriangle, FileSpreadsheet, BarChart3
 } from 'lucide-react';
-import rawData from './data.json';
 import * as XLSX from 'xlsx';
+import { supabase } from './supabaseClient';
 
 const STATUS = { PENDING: 'pending', CONFIRMED: 'confirmed', MOVED: 'moved' };
 
-const initData = () => {
-  try {
-    const cached = localStorage.getItem('registrabem_data');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed.length > 0 && !('status' in parsed[0])) {
-        const migrated = parsed.map(item => ({
-          ...item,
-          status: item.isVerified ? STATUS.CONFIRMED : STATUS.PENDING,
-          originalLocation: item.location || '',
-          isExtra: false,
-          condition: item.condition || '',
-        }));
-        localStorage.setItem('registrabem_data', JSON.stringify(migrated));
-        return migrated;
-      }
-      // Migrate existing data to add condition field if missing
-      if (parsed.length > 0 && !('condition' in parsed[0])) {
-        const migrated = parsed.map(item => ({ ...item, condition: item.condition || '' }));
-        localStorage.setItem('registrabem_data', JSON.stringify(migrated));
-        return migrated;
-      }
-      return parsed;
-    }
-  } catch (e) {
-    console.warn("Could not read local storage", e);
-  }
+const SECTOR_NAMES = {
+  'PRAE': 'Pró-Reitoria de Assistência Estudantil - PRAE',
+  'CAF': 'Coordenadoria Administrativa e Financeira - CAF',
+  'CAME': 'Coordenadoria de Atenção Multiprofissional ao Estudante - CAME',
+  'CASE': 'Coordenadoria de Assistência Estudantil - CASE',
+  'CRU': 'Coordenadoria do Restaurante Universitário - CRU',
+  'DIBEM': 'Divisão de Benefício e Moradia - DIBEM',
+  'DSO': 'Divisão de Serviços Operacionais - DSO'
+};
 
-  const mapped = rawData.map(r => ({
-    id: r['Tombamento'],
-    systemName: r['Nome Sistema'] || 'Não especificado',
-    sector: r['Local Sistema'] || 'Geral',
-    year: r['Ano'],
-    name: r['Nome'],
-    location: r['Ambiente (Local Exato)'] || '',
-    originalLocation: r['Ambiente (Local Exato)'] || '',
-    status: STATUS.PENDING,
-    isExtra: false,
-    condition: '',
-    logs: []
-  }));
-  localStorage.setItem('registrabem_data', JSON.stringify(mapped));
-  return mapped;
+const getSectorName = (rawName) => {
+  if (!rawName) return '';
+  const upper = rawName.toUpperCase();
+  const match = Object.keys(SECTOR_NAMES).find(key => upper.includes(key));
+  return match ? SECTOR_NAMES[match] : rawName;
 };
 
 export default function App() {
-  const [assets, setAssets] = useState(initData);
+  const [assets, setAssets] = useState([]);
   const [sector, setSector] = useState(() => localStorage.getItem('registrabem_sector') || null);
+  
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        let allData = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('tabela_inicial')
+            .select('*')
+            .range(from, to);
+            
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            from += 1000;
+            to += 1000;
+            if (data.length < 1000) hasMore = false;
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        if (allData.length > 0) {
+          const mapped = allData.map(r => ({
+            id: r.tombamento,
+            name: r.nome || 'Sem Descrição',
+            sector: r.local_sistema || 'Geral',
+            location: r.local_exato_ambiente || '',
+            originalLocation: r.local_exato_ambiente || '',
+            status: r.status || STATUS.PENDING,
+            condition: r.condicao || '',
+            systemName: r.nome_sistema || 'Não especificado',
+            year: new Date().getFullYear(),
+            isExtra: false,
+            logs: []
+          }));
+          setAssets(mapped);
+          localStorage.setItem('registrabem_data', JSON.stringify(mapped)); // backup cache
+        }
+      } catch (err) {
+        console.error("Erro ao buscar Supabase", err);
+        // Fallback para cache local se offline
+        const cached = localStorage.getItem('registrabem_data');
+        if (cached) setAssets(JSON.parse(cached));
+      }
+    };
+    fetchAssets();
+  }, []);
+
   const [search, setSearch] = useState('');
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [newLocation, setNewLocation] = useState('');
@@ -107,16 +133,22 @@ export default function App() {
   };
 
   // === HANDLERS ===
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedAsset) return;
     const newStatus = (selectedAsset.location && selectedAsset.location !== selectedAsset.originalLocation)
       ? STATUS.MOVED : STATUS.CONFIRMED;
     setAssets(prev => prev.map(a => a.id === selectedAsset.id ? { ...a, status: newStatus } : a));
     setSelectedAsset(prev => ({ ...prev, status: newStatus }));
     showToast(newStatus === STATUS.CONFIRMED ? '✅ Item confirmado!' : '🔄 Marcado como movimentado!');
+    
+    try {
+      await supabase.from('tabela_inicial')
+        .update({ status: newStatus })
+        .eq('tombamento', selectedAsset.id);
+    } catch(e) { console.error("Erro BD", e); }
   };
 
-  const handleUpdateLocation = () => {
+  const handleUpdateLocation = async () => {
     if (!selectedAsset || !newLocation.trim() || newLocation === selectedAsset.location) return;
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
@@ -130,9 +162,15 @@ export default function App() {
     setSelectedAsset(prev => ({ ...prev, location: newLocation, status: newStatus, logs: [logEntry, ...prev.logs] }));
     setNewLocation('');
     showToast('📍 Localização atualizada!');
+    
+    try {
+      await supabase.from('tabela_inicial')
+        .update({ status: newStatus, local_exato_ambiente: newLocation })
+        .eq('tombamento', selectedAsset.id);
+    } catch(e) { console.error("Erro BD", e); }
   };
 
-  const handleChangeSector = () => {
+  const handleChangeSector = async () => {
     if (!selectedAsset || !newSector || newSector === selectedAsset.sector) return;
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
@@ -146,18 +184,30 @@ export default function App() {
     setShowSectorChange(false);
     setNewSector('');
     showToast('🔄 Divisão alterada!');
+
+    try {
+      await supabase.from('tabela_inicial')
+        .update({ status: STATUS.MOVED, local_sistema: newSector })
+        .eq('tombamento', selectedAsset.id);
+    } catch(e) { console.error("Erro BD", e); }
   };
 
-  const handleConditionChange = (value) => {
+  const handleConditionChange = async (value) => {
     if (!selectedAsset) return;
     setAssets(prev => prev.map(a =>
       a.id === selectedAsset.id ? { ...a, condition: value } : a
     ));
     setSelectedAsset(prev => ({ ...prev, condition: value }));
     if (value) showToast(`📋 Condição: ${value}`);
+
+    try {
+      await supabase.from('tabela_inicial')
+        .update({ condicao: value })
+        .eq('tombamento', selectedAsset.id);
+    } catch(e) { console.error("Erro BD", e); }
   };
 
-  const handleAddExtra = () => {
+  const handleAddExtra = async () => {
     if (!extraTombamento.trim() || !extraLocation.trim()) { showToast('⚠️ Preencha tombamento e local!'); return; }
     if (assets.some(a => a.id.toString() === extraTombamento.trim())) { showToast('⚠️ Tombamento já existe!'); return; }
     const newAsset = {
@@ -167,10 +217,20 @@ export default function App() {
       condition: '',
       logs: [{ date: new Date().toLocaleString('pt-BR'), from: 'Registro Manual', to: extraLocation.trim() }]
     };
-    setAssets(prev => [...prev, newAsset]);
-    setExtraTombamento(''); setExtraName(''); setExtraLocation('');
-    setShowAddExtra(false);
-    showToast('✅ Item extra registrado!');
+    setAssets(prev => [newAsset, ...prev]);
+    setShowAddExtra(false); setExtraTombamento(''); setExtraName(''); setExtraLocation('');
+    showToast('➕ Item Adicionado!');
+
+    try {
+      await supabase.from('tabela_inicial').insert([{
+        tombamento: newAsset.id,
+        local_sistema: newAsset.sector,
+        nome: newAsset.name,
+        local_exato_ambiente: newAsset.location,
+        status: newAsset.status,
+        condicao: newAsset.condition
+      }]);
+    } catch(e) { console.error("Erro BD", e); }
   };
 
 
@@ -224,7 +284,7 @@ export default function App() {
                 return (
                   <button key={s} className="sector-btn" onClick={() => { setSector(s); setSearch(''); }}>
                     <Building size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                    <span className="sector-btn-name">{s}</span>
+                    <span className="sector-btn-name">{getSectorName(s)}</span>
                     <span className="sector-btn-count">{done}/{si.length}</span>
                   </button>
                 );
@@ -380,7 +440,7 @@ export default function App() {
             {sectorStats.map(stat => (
               <div key={stat.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                  <strong style={{ color: 'var(--text-main)' }}>{stat.name}</strong>
+                  <strong style={{ color: 'var(--text-main)' }}>{getSectorName(stat.name)}</strong>
                   <span style={{ color: 'var(--text-muted)' }}>{stat.done}/{stat.total} ({stat.progress}%)</span>
                 </div>
                 <div className="progress-bar" style={{ height: '6px', background: 'var(--background)' }}>
@@ -448,15 +508,15 @@ export default function App() {
       {toast && <div className="toast fade-in">{toast}</div>}
 
       <div className="app-container fade-in">
-        {/* Header (Mobile) */}
-        <header className="header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Package size={22} color="var(--primary)" />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h1 className="header-title" style={{ fontSize: '1.05rem', lineHeight: '1.2' }}>{sector}</h1>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{view === 'dashboard' ? 'Visão Geral' : view === 'list' ? 'Lista de Patrimônios' : 'Relatório'}</span>
-            </div>
-          </div>
+            {/* Header (Mobile) */}
+            <header className="header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Package size={22} color="var(--primary)" />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h1 className="header-title" style={{ fontSize: '1.05rem', lineHeight: '1.2' }}>{getSectorName(sector)}</h1>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{view === 'dashboard' ? 'Visão Geral' : view === 'list' ? 'Lista de Patrimônios' : 'Relatório'}</span>
+                </div>
+              </div>
           <button className="btn-outline" onClick={() => { setSector(null); setView('list'); setSearch(''); }} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
             <ArrowRightLeft size={14} style={{ marginRight: '6px' }}/> Mudar
           </button>
@@ -494,9 +554,9 @@ export default function App() {
           <main className="main-content">
             <div className="desktop-only" style={{ marginBottom: '24px' }}>
               <h1 style={{ fontSize: '1.6rem', fontWeight: '700' }}>
-                 {view === 'dashboard' ? 'Visão Geral da Unidade' : sector}
+                 {view === 'dashboard' ? 'Visão Geral da Unidade' : (view === 'list' ? 'Lista de Patrimônios Ativos' : 'Relatório de Auditoria')}
               </h1>
-              {view !== 'dashboard' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{view === 'list' ? 'Lista de Patrimônios Ativos' : 'Relatório de Auditoria da Divisão'}</span>}
+              {view !== 'dashboard' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{getSectorName(sector)}</span>}
             </div>
 
             {view === 'dashboard' ? renderDashboard() : view === 'report' ? renderReport() : (
