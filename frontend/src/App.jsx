@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, CheckCircle, MapPin, Building, Package, CheckCircle2,
-  History, Plus, ClipboardList, Download, ArrowRightLeft,
+  History, Plus, ClipboardList, Download, ArrowRightLeft, LogIn,
   X, Clock, Database, List, AlertTriangle, FileSpreadsheet, BarChart3
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from './supabaseClient';
+import Auth from './Auth';
 
 const STATUS = { PENDING: 'pending', CONFIRMED: 'confirmed', MOVED: 'moved' };
 
@@ -27,9 +28,55 @@ const getSectorName = (rawName) => {
 };
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [assets, setAssets] = useState([]);
   const [sector, setSector] = useState(() => localStorage.getItem('registrabem_sector') || null);
   
+  // Auth state management
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) fetchProfile(session.user.id);
+      else setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) fetchProfile(session.user.id);
+      else {
+        setProfile(null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      setProfile(data);
+    } catch (err) {
+      console.error("Erro ao buscar perfil:", err);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const isAuthorized = useMemo(() => {
+    if (!profile) return false;
+    const authorizedRoles = ['agente', 'gestor', 'coordenador', 'admin'];
+    return authorizedRoles.includes(profile.role?.toLowerCase());
+  }, [profile]);
+
   useEffect(() => {
     const fetchAssets = async () => {
       try {
@@ -135,6 +182,10 @@ export default function App() {
   // === HANDLERS ===
   const handleConfirm = async () => {
     if (!selectedAsset) return;
+    if (!isAuthorized) {
+      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      return;
+    }
     const newStatus = (selectedAsset.location && selectedAsset.location !== selectedAsset.originalLocation)
       ? STATUS.MOVED : STATUS.CONFIRMED;
     setAssets(prev => prev.map(a => a.id === selectedAsset.id ? { ...a, status: newStatus } : a));
@@ -150,6 +201,10 @@ export default function App() {
 
   const handleUpdateLocation = async () => {
     if (!selectedAsset || !newLocation.trim() || newLocation === selectedAsset.location) return;
+    if (!isAuthorized) {
+      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      return;
+    }
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
       from: selectedAsset.location || 'Não definido',
@@ -172,6 +227,10 @@ export default function App() {
 
   const handleChangeSector = async () => {
     if (!selectedAsset || !newSector || newSector === selectedAsset.sector) return;
+    if (!isAuthorized) {
+      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      return;
+    }
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
       from: `Divisão: ${selectedAsset.sector}`,
@@ -194,6 +253,10 @@ export default function App() {
 
   const handleConditionChange = async (value) => {
     if (!selectedAsset) return;
+    if (!isAuthorized) {
+      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      return;
+    }
     setAssets(prev => prev.map(a =>
       a.id === selectedAsset.id ? { ...a, condition: value } : a
     ));
@@ -209,6 +272,10 @@ export default function App() {
 
   const handleAddExtra = async () => {
     if (!extraTombamento.trim() || !extraLocation.trim()) { showToast('⚠️ Preencha tombamento e local!'); return; }
+    if (!isAuthorized) {
+      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      return;
+    }
     if (assets.some(a => a.id.toString() === extraTombamento.trim())) { showToast('⚠️ Tombamento já existe!'); return; }
     const newAsset = {
       id: extraTombamento.trim(), systemName: 'Item Extra (Manual)', sector,
@@ -261,8 +328,25 @@ export default function App() {
   const getStatusClass = (s) => s === STATUS.CONFIRMED ? 'status-confirmed' : s === STATUS.MOVED ? 'status-moved' : 'status-pending';
 
   // ==============================
-  // SECTOR SELECTION SCREEN
+  // LOADING / AUTH SCREENS
   // ==============================
+  if (authLoading) {
+    return (
+      <div className="auth-screen">
+        <div style={{ textAlign: 'center' }}>
+          <div className="pulse" style={{ marginBottom: '20px' }}>
+             <Package size={48} color="var(--primary)" />
+          </div>
+          <p style={{ color: 'var(--text-muted)' }}>Carregando acesso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
+
   if (!sector) {
     return (
       <div className="app-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -517,9 +601,14 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{view === 'dashboard' ? 'Visão Geral' : view === 'list' ? 'Lista de Patrimônios' : 'Relatório'}</span>
                 </div>
               </div>
-          <button className="btn-outline" onClick={() => { setSector(null); setView('list'); setSearch(''); }} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-            <ArrowRightLeft size={14} style={{ marginRight: '6px' }}/> Mudar
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn-outline mobile-only" onClick={() => supabase.auth.signOut()} style={{ padding: '6px' }}>
+              <LogIn size={16} style={{ transform: 'rotate(180deg)' }}/>
+            </button>
+            <button className="btn-outline" onClick={() => { setSector(null); setView('list'); setSearch(''); }} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+              <ArrowRightLeft size={14} style={{ marginRight: '6px' }}/> Mudar
+            </button>
+          </div>
         </header>
 
         <div className="app-content-wrapper">
@@ -538,6 +627,22 @@ export default function App() {
             <button className={`nav-item ${view === 'report' ? 'active' : ''}`} onClick={() => setView('report')}>
               <ClipboardList size={20} /> <span className="nav-label">Relatório</span>
             </button>
+            <div className="desktop-only" style={{ marginTop: 'auto', padding: '20px 0', borderTop: '1px solid var(--glass-border)', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', padding: '0 16px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700' }}>
+                  {session.user.email.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user.email}</div>
+                  <div style={{ fontSize: '0.7rem', color: isAuthorized ? 'var(--secondary)' : 'var(--warning)' }}>
+                    {isAuthorized ? `Acesso: ${profile?.role || 'Agente'}` : 'Aguardando Liberação'}
+                  </div>
+                </div>
+              </div>
+              <button className="nav-item" onClick={() => supabase.auth.signOut()} style={{ width: '100%', color: 'var(--danger)', justifyContent: 'flex-start' }}>
+                <LogIn size={20} style={{ transform: 'rotate(180deg)' }} /> <span className="nav-label">Sair da Conta</span>
+              </button>
+            </div>
             {/* Desktop Bottom Actions */}
             <div className="desktop-only" style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button className="btn btn-outline" onClick={() => { setSector(null); setView('list'); setSearch(''); }}>
