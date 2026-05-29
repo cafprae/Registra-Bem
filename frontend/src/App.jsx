@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search, CheckCircle, MapPin, Building, Package, CheckCircle2,
   History, Plus, ClipboardList, Download, ArrowRightLeft, LogIn,
-  X, Clock, Database, List, AlertTriangle, FileSpreadsheet, BarChart3
+  X, Clock, Database, List, AlertTriangle, FileSpreadsheet, BarChart3,
+  Users, Shield, UserCheck, UserX, Edit3, Eye
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from './supabaseClient';
@@ -71,11 +72,70 @@ export default function App() {
     }
   };
 
+  const isAdmin = useMemo(() => {
+    if (!profile) return false;
+    return profile.role?.toLowerCase() === 'admin';
+  }, [profile]);
+
   const isAuthorized = useMemo(() => {
     if (!profile) return false;
-    const authorizedRoles = ['agente', 'gestor', 'coordenador', 'admin'];
+    const authorizedRoles = ['editor', 'admin', 'agente', 'gestor', 'coordenador'];
     return authorizedRoles.includes(profile.role?.toLowerCase());
   }, [profile]);
+
+  // === USER MANAGEMENT (admin only) ===
+  const [allUsers, setAllUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+
+  const fetchAllUsers = useCallback(async () => {
+    if (!isAdmin) return;
+    setUsersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setAllUsers(data || []);
+    } catch (err) {
+      console.error('Erro ao buscar usuários:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [isAdmin]);
+
+  const handleChangeRole = async (userId, newRole) => {
+    if (!isAdmin) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      showToast(`✅ Perfil atualizado para: ${getRoleLabel(newRole)}`);
+    } catch (err) {
+      console.error('Erro ao atualizar role:', err);
+      showToast('❌ Erro ao atualizar perfil');
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = { admin: 'Administrador', editor: 'Editor', viewer: 'Visualizador' };
+    return labels[role] || role || 'Visualizador';
+  };
+
+  const getRoleColor = (role) => {
+    const colors = { admin: '#EF4444', editor: '#3B82F6', viewer: '#94A3B8' };
+    return colors[role] || '#94A3B8';
+  };
+
+  const getRoleIcon = (role) => {
+    if (role === 'admin') return <Shield size={14} />;
+    if (role === 'editor') return <Edit3 size={14} />;
+    return <Eye size={14} />;
+  };
 
   useEffect(() => {
     const fetchAssets = async () => {
@@ -134,6 +194,10 @@ export default function App() {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [newLocation, setNewLocation] = useState('');
   const [view, setView] = useState('list');
+  // When admin switches to users view, fetch the list
+  useEffect(() => {
+    if (view === 'users' && isAdmin) fetchAllUsers();
+  }, [view, isAdmin, fetchAllUsers]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddExtra, setShowAddExtra] = useState(false);
   const [extraTombamento, setExtraTombamento] = useState('');
@@ -585,6 +649,151 @@ export default function App() {
 
 
   // ==============================
+  // USER MANAGEMENT VIEW (admin only)
+  // ==============================
+  const renderUserManagement = () => {
+    const filteredUsers = allUsers.filter(u => {
+      if (!userSearch) return true;
+      const search = userSearch.toLowerCase();
+      return (u.full_name && u.full_name.toLowerCase().includes(search)) ||
+             (u.id && u.id.toLowerCase().includes(search));
+    });
+
+    const countByRole = {
+      admin: allUsers.filter(u => u.role === 'admin').length,
+      editor: allUsers.filter(u => u.role === 'editor').length,
+      viewer: allUsers.filter(u => !u.role || u.role === 'viewer').length,
+    };
+
+    return (
+      <div className="fade-in">
+        {/* Stats */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-value">{allUsers.length}</div>
+            <div className="stat-label">Total</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: '#EF4444' }}>{countByRole.admin}</div>
+            <div className="stat-label">Admins</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: '#3B82F6' }}>{countByRole.editor}</div>
+            <div className="stat-label">Editores</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: '#94A3B8' }}>{countByRole.viewer}</div>
+            <div className="stat-label">Visualizadores</div>
+          </div>
+        </div>
+
+        {/* Info box */}
+        <div className="glass-panel" style={{ padding: '16px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <Shield size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            <strong style={{ color: 'var(--text-main)' }}>Níveis de Acesso:</strong><br/>
+            <span style={{ color: '#EF4444' }}>Administrador</span> — Acesso total + gerenciamento de usuários<br/>
+            <span style={{ color: '#3B82F6' }}>Editor</span> — Pode confirmar, movimentar e registrar bens<br/>
+            <span style={{ color: '#94A3B8' }}>Visualizador</span> — Apenas visualização (sem edição)
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="search-container" style={{ marginBottom: '20px' }}>
+          <Search className="search-icon" size={18} />
+          <input
+            type="text"
+            className="text-input search-input"
+            placeholder="Buscar por nome ou e-mail..."
+            value={userSearch}
+            onChange={e => setUserSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Refresh */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <button className="btn btn-outline" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={fetchAllUsers} disabled={usersLoading}>
+            {usersLoading ? 'Carregando...' : '🔄 Atualizar Lista'}
+          </button>
+        </div>
+
+        {/* User list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredUsers.map(user => (
+            <div key={user.id} className="glass-panel" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${getRoleColor(user.role)}, ${getRoleColor(user.role)}99)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', fontWeight: '700', color: 'white', flexShrink: 0
+                  }}>
+                    {(user.full_name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {user.full_name || 'Sem nome'}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      ID: {user.id.substring(0, 8)}...
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current role badge */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600',
+                  background: `${getRoleColor(user.role)}20`, color: getRoleColor(user.role),
+                  border: `1px solid ${getRoleColor(user.role)}40`
+                }}>
+                  {getRoleIcon(user.role)} {getRoleLabel(user.role)}
+                </div>
+              </div>
+
+              {/* Role change buttons */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  className={`btn ${user.role === 'viewer' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ flex: 1, padding: '10px 12px', fontSize: '0.82rem', minWidth: '100px' }}
+                  onClick={() => handleChangeRole(user.id, 'viewer')}
+                  disabled={user.role === 'viewer'}
+                >
+                  <Eye size={14} /> Visualizador
+                </button>
+                <button
+                  className={`btn ${user.role === 'editor' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ flex: 1, padding: '10px 12px', fontSize: '0.82rem', minWidth: '100px' }}
+                  onClick={() => handleChangeRole(user.id, 'editor')}
+                  disabled={user.role === 'editor'}
+                >
+                  <Edit3 size={14} /> Editor
+                </button>
+                <button
+                  className={`btn ${user.role === 'admin' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ flex: 1, padding: '10px 12px', fontSize: '0.82rem', minWidth: '100px' }}
+                  onClick={() => handleChangeRole(user.id, 'admin')}
+                  disabled={user.role === 'admin'}
+                >
+                  <Shield size={14} /> Admin
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {filteredUsers.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon"><Users size={40} /></div>
+              {usersLoading ? 'Carregando usuários...' : 'Nenhum usuário encontrado.'}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ==============================
   // MAIN RENDER
   // ==============================
   return (
@@ -627,6 +836,11 @@ export default function App() {
             <button className={`nav-item ${view === 'report' ? 'active' : ''}`} onClick={() => setView('report')}>
               <ClipboardList size={20} /> <span className="nav-label">Relatório</span>
             </button>
+            {isAdmin && (
+              <button className={`nav-item ${view === 'users' ? 'active' : ''}`} onClick={() => setView('users')}>
+                <Users size={20} /> <span className="nav-label">Usuários</span>
+              </button>
+            )}
             <div className="desktop-only" style={{ marginTop: 'auto', padding: '20px 0', borderTop: '1px solid var(--glass-border)', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', padding: '0 16px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700' }}>
@@ -635,7 +849,7 @@ export default function App() {
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user.email}</div>
                   <div style={{ fontSize: '0.7rem', color: isAuthorized ? 'var(--secondary)' : 'var(--warning)' }}>
-                    {isAuthorized ? `Acesso: ${profile?.role || 'Agente'}` : 'Aguardando Liberação'}
+                    {isAuthorized ? `${getRoleLabel(profile?.role)}` : 'Aguardando Liberação'}
                   </div>
                 </div>
               </div>
@@ -659,12 +873,13 @@ export default function App() {
           <main className="main-content">
             <div className="desktop-only" style={{ marginBottom: '24px' }}>
               <h1 style={{ fontSize: '1.6rem', fontWeight: '700' }}>
-                 {view === 'dashboard' ? 'Visão Geral da Unidade' : (view === 'list' ? 'Lista de Patrimônios Ativos' : 'Relatório de Auditoria')}
+                 {view === 'dashboard' ? 'Visão Geral da Unidade' : view === 'users' ? 'Gerenciamento de Usuários' : (view === 'list' ? 'Lista de Patrimônios Ativos' : 'Relatório de Auditoria')}
               </h1>
-              {view !== 'dashboard' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{getSectorName(sector)}</span>}
+              {view !== 'dashboard' && view !== 'users' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{getSectorName(sector)}</span>}
+              {view === 'users' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Gerencie os acessos dos usuários cadastrados</span>}
             </div>
 
-            {view === 'dashboard' ? renderDashboard() : view === 'report' ? renderReport() : (
+            {view === 'users' && isAdmin ? renderUserManagement() : view === 'dashboard' ? renderDashboard() : view === 'report' ? renderReport() : (
             <>
               {/* Stats */}
               <div className="stats-grid">

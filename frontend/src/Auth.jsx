@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from './supabaseClient';
-import { Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle, Package, User } from 'lucide-react';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -45,19 +45,31 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ 
+        // Sign up with role in user_metadata
+        const { data, error } = await supabase.auth.signUp({ 
           email, 
           password,
           options: {
             data: {
               full_name: fullName,
+              role: 'viewer',
               domain: 'ufc.br'
             },
             emailRedirectTo: window.location.origin,
           }
         });
         if (error) throw error;
-        setMessage('Cadastro realizado! Verifique seu e-mail institucional para confirmar a conta.');
+
+        // Create profile in the profiles table
+        if (data?.user) {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            full_name: fullName,
+            role: 'viewer',
+          }, { onConflict: 'id' });
+        }
+
+        setMessage('Cadastro realizado! Verifique seu e-mail institucional para confirmar a conta. Após a confirmação, o administrador liberará seu acesso.');
       }
     } catch (err) {
       setError(err.message);
@@ -102,7 +114,7 @@ export default function Auth() {
               <div className="form-group fade-in">
                 <label className="input-label">Nome Completo</label>
                 <div style={{ position: 'relative' }}>
-                  <Package size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
+                  <User size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
                   <input 
                     type="text" 
                     className="text-input" 
@@ -187,7 +199,6 @@ export default function Auth() {
               type="button"
               className="btn-link" 
               onClick={() => { 
-                console.log('Toggling auth mode...');
                 setIsLogin(!isLogin); 
                 setError(null); 
                 setMessage(null); 
@@ -212,7 +223,7 @@ export default function Auth() {
         
         {!isLogin && (
           <p style={{ marginTop: '24px', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', lineHeight: '1.5' }}>
-            Após o cadastro, o acesso às funcionalidades de edição será liberado manualmente apenas para agentes de patrimônio e gestores autorizados.
+            Após o cadastro, o acesso às funcionalidades de edição será liberado pelo administrador do sistema.
           </p>
         )}
       </div>
