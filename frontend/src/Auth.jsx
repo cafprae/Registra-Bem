@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from './supabaseClient';
-import { Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle, Package, User } from 'lucide-react';
+import { Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle, Package, User, Building2 } from 'lucide-react';
+import { SECTOR_OPTIONS } from './constants';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,12 +10,11 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [sector, setSector] = useState('');
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
-  const validateEmail = (email) => {
-    return email.toLowerCase().endsWith('@ufc.br');
-  };
+  const validateEmail = (value) => value.toLowerCase().endsWith('@ufc.br');
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -40,31 +40,37 @@ export default function Auth() {
       return;
     }
 
+    if (!isLogin && !sector) {
+      setError('Selecione seu setor / divisão.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
       } else {
-        // Sign up with role in user_metadata
-        const { data, error } = await supabase.auth.signUp({ 
-          email, 
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
           password,
           options: {
             data: {
               full_name: fullName,
+              sector,
               role: 'viewer',
-              domain: 'ufc.br'
+              domain: 'ufc.br',
             },
             emailRedirectTo: window.location.origin,
-          }
+          },
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
 
-        // Create profile in the profiles table
         if (data?.user) {
           await supabase.from('profiles').upsert({
             id: data.user.id,
             full_name: fullName,
+            sector,
             role: 'viewer',
           }, { onConflict: 'id' });
         }
@@ -76,6 +82,12 @@ export default function Auth() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetSignupFields = () => {
+    setSector('');
+    setConfirmPassword('');
+    setFullName('');
   };
 
   return (
@@ -93,53 +105,85 @@ export default function Auth() {
           <h2 style={{ marginBottom: '24px', fontSize: '1.4rem', textAlign: 'center' }}>
             {isLogin ? 'Bem-vindo de volta' : 'Criar conta institucional'}
           </h2>
-          
-          <form onSubmit={handleAuth}>
+
+          <form onSubmit={handleAuth} autoComplete="on">
             <div className="form-group">
-              <label className="input-label">E-mail @ufc.br</label>
+              <label className="input-label" htmlFor="auth-email">E-mail @ufc.br</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-                <input 
-                  type="email" 
-                  className="text-input" 
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  className="text-input"
                   style={{ paddingLeft: '44px' }}
-                  placeholder="seuemail@ufc.br" 
+                  placeholder="seuemail@ufc.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
-            
-            {!isLogin && (
-              <div className="form-group fade-in">
-                <label className="input-label">Nome Completo</label>
-                <div style={{ position: 'relative' }}>
-                  <User size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-                  <input 
-                    type="text" 
-                    className="text-input" 
-                    style={{ paddingLeft: '44px' }}
-                    placeholder="Seu Nome Completo" 
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            )}
+
+              {!isLogin && (
+                <>
+                  <div className="form-group fade-in" style={{ marginTop: '16px' }}>
+                    <label className="input-label" htmlFor="auth-fullname">Nome Completo</label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
+                      <input
+                        id="auth-fullname"
+                        name="full_name"
+                        type="text"
+                        className="text-input"
+                        style={{ paddingLeft: '44px' }}
+                        placeholder="Seu Nome Completo"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        autoComplete="name"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group fade-in" style={{ marginTop: '16px' }}>
+                    <label className="input-label" htmlFor="auth-sector">Setor / Divisão</label>
+                    <div style={{ position: 'relative' }}>
+                      <Building2 size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)', zIndex: 1, pointerEvents: 'none' }} />
+                      <select
+                        id="auth-sector"
+                        name="sector"
+                        className="text-input select-input"
+                        style={{ paddingLeft: '44px' }}
+                        value={sector}
+                        onChange={(e) => setSector(e.target.value)}
+                        required
+                      >
+                        <option value="">-- Selecione seu setor --</option>
+                        {SECTOR_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="input-label">Senha</label>
+              <label className="input-label" htmlFor="auth-password">Senha</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-                <input 
-                  type="password" 
-                  className="text-input" 
+                <input
+                  id="auth-password"
+                  name="password"
+                  type="password"
+                  className="text-input"
                   style={{ paddingLeft: '44px' }}
-                  placeholder="Sua senha segura" 
+                  placeholder="Sua senha segura"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
                   required
                 />
               </div>
@@ -147,16 +191,19 @@ export default function Auth() {
 
             {!isLogin && (
               <div className="form-group fade-in" style={{ marginBottom: '24px' }}>
-                <label className="input-label">Confirmar Senha</label>
+                <label className="input-label" htmlFor="auth-confirm-password">Confirmar Senha</label>
                 <div style={{ position: 'relative' }}>
                   <Lock size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-                  <input 
-                    type="password" 
-                    className="text-input" 
+                  <input
+                    id="auth-confirm-password"
+                    name="confirm_password"
+                    type="password"
+                    className="text-input"
                     style={{ paddingLeft: '44px' }}
-                    placeholder="Repita sua senha" 
+                    placeholder="Repita sua senha"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
                     required
                   />
                 </div>
@@ -164,8 +211,8 @@ export default function Auth() {
             )}
 
             {error && (
-              <div style={{ 
-                display: 'flex', gap: '8px', padding: '12px', background: 'rgba(239, 68, 68, 0.15)', 
+              <div style={{
+                display: 'flex', gap: '8px', padding: '12px', background: 'rgba(239, 68, 68, 0.15)',
                 color: '#F87171', borderRadius: '10px', fontSize: '0.85rem', marginBottom: '20px',
                 border: '1px solid rgba(239, 68, 68, 0.2)'
               }}>
@@ -175,8 +222,8 @@ export default function Auth() {
             )}
 
             {message && (
-              <div style={{ 
-                display: 'flex', gap: '8px', padding: '12px', background: 'rgba(16, 185, 129, 0.15)', 
+              <div style={{
+                display: 'flex', gap: '8px', padding: '12px', background: 'rgba(16, 185, 129, 0.15)',
                 color: '#34D399', borderRadius: '10px', fontSize: '0.85rem', marginBottom: '20px',
                 border: '1px solid rgba(16, 185, 129, 0.2)'
               }}>
@@ -195,20 +242,21 @@ export default function Auth() {
           </form>
 
           <div style={{ marginTop: '24px', textAlign: 'center', borderTop: '1px solid var(--glass-border)', paddingTop: '20px' }}>
-            <button 
+            <button
               type="button"
-              className="btn-link" 
-              onClick={() => { 
-                setIsLogin(!isLogin); 
-                setError(null); 
-                setMessage(null); 
+              className="btn-link"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError(null);
+                setMessage(null);
+                if (isLogin) resetSignupFields();
               }}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'var(--primary)', 
-                cursor: 'pointer', 
-                fontSize: '0.95rem', 
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
                 fontWeight: '600',
                 textDecoration: 'none',
                 padding: '8px 16px',
@@ -220,7 +268,7 @@ export default function Auth() {
             </button>
           </div>
         </div>
-        
+
         {!isLogin && (
           <p style={{ marginTop: '24px', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', lineHeight: '1.5' }}>
             Após o cadastro, o acesso às funcionalidades de edição será liberado pelo administrador do sistema.

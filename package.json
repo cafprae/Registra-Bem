@@ -1,9 +1,13 @@
 {
   "scripts": {
     "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build"
+    "build": "cd frontend && npm run build",
+    "lint": "cd frontend && npm run lint",
+    "test": "cd frontend && npm run test"
   },
   "devDependencies": {
-    "eslint": "^10.4.0"
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^29.1.1"
   }
 }
