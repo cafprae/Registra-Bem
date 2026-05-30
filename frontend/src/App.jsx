@@ -2,86 +2,23 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search, CheckCircle, MapPin, Building, Package, CheckCircle2,
   History, Plus, ClipboardList, Download, ArrowRightLeft, LogIn,
-  X, Clock, Database, List, AlertTriangle, FileSpreadsheet, BarChart3,
+  X, Clock, Database, List, AlertTriangle, BarChart3,
   Users, Shield, UserCheck, UserX, Edit3, Eye
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from './supabaseClient';
 import Auth from './Auth';
-
-const STATUS = { PENDING: 'pending', CONFIRMED: 'confirmed', MOVED: 'moved' };
-
-const SECTOR_NAMES = {
-  'PRAE': 'Pró-Reitoria de Assistência Estudantil - PRAE',
-  'CAF': 'Coordenadoria Administrativa e Financeira - CAF',
-  'CAME': 'Coordenadoria de Atenção Multiprofissional ao Estudante - CAME',
-  'CASE': 'Coordenadoria de Assistência Estudantil - CASE',
-  'CRU': 'Coordenadoria do Restaurante Universitário - CRU',
-  'DIBEM': 'Divisão de Benefício e Moradia - DIBEM',
-  'DSO': 'Divisão de Serviços Operacionais - DSO'
-};
-
-const getSectorName = (rawName) => {
-  if (!rawName) return '';
-  const upper = rawName.toUpperCase();
-  const match = Object.keys(SECTOR_NAMES).find(key => upper.includes(key));
-  return match ? SECTOR_NAMES[match] : rawName;
-};
+import LoadingScreen from './components/LoadingScreen';
+import ReportView from './components/ReportView';
+import SectorSelector from './components/SectorSelector';
+import { getRoleColor, getRoleLabel, getSectorName, STATUS } from './constants';
+import { useAssets } from './hooks/useAssets';
+import { useAuthProfile } from './hooks/useAuthProfile';
 
 export default function App() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [assets, setAssets] = useState([]);
+  const { session, profile, authLoading, isAdmin, isAuthorized } = useAuthProfile(supabase);
+  const { assets, setAssets } = useAssets(supabase);
   const [sector, setSector] = useState(() => localStorage.getItem('registrabem_sector') || null);
-  
-  // Auth state management
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else setAuthLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
-        setProfile(null);
-        setAuthLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      setProfile(data);
-    } catch (err) {
-      console.error("Erro ao buscar perfil:", err);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const isAdmin = useMemo(() => {
-    if (!profile) return false;
-    return profile.role?.toLowerCase() === 'admin';
-  }, [profile]);
-
-  const isAuthorized = useMemo(() => {
-    if (!profile) return false;
-    const authorizedRoles = ['editor', 'admin', 'agente', 'gestor', 'coordenador'];
-    return authorizedRoles.includes(profile.role?.toLowerCase());
-  }, [profile]);
 
   // === USER MANAGEMENT (admin only) ===
   const [allUsers, setAllUsers] = useState([]);
@@ -107,28 +44,20 @@ export default function App() {
 
   const handleChangeRole = async (userId, newRole) => {
     if (!isAdmin) return;
+    const previousUsers = allUsers;
+    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole, updated_at: new Date().toISOString() })
         .eq('id', userId);
       if (error) throw error;
-      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      showToast(`✅ Perfil atualizado para: ${getRoleLabel(newRole)}`);
+      showToast(`Perfil atualizado para: ${getRoleLabel(newRole)}`);
     } catch (err) {
       console.error('Erro ao atualizar role:', err);
-      showToast('❌ Erro ao atualizar perfil');
+      setAllUsers(previousUsers);
+      showToast('Erro ao atualizar perfil. Alteração desfeita.');
     }
-  };
-
-  const getRoleLabel = (role) => {
-    const labels = { admin: 'Administrador', editor: 'Editor', viewer: 'Visualizador' };
-    return labels[role] || role || 'Visualizador';
-  };
-
-  const getRoleColor = (role) => {
-    const colors = { admin: '#EF4444', editor: '#3B82F6', viewer: '#94A3B8' };
-    return colors[role] || '#94A3B8';
   };
 
   const getRoleIcon = (role) => {
@@ -136,59 +65,6 @@ export default function App() {
     if (role === 'editor') return <Edit3 size={14} />;
     return <Eye size={14} />;
   };
-
-  useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        let allData = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from('tabela_inicial')
-            .select('*')
-            .range(from, to);
-            
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            from += 1000;
-            to += 1000;
-            if (data.length < 1000) hasMore = false;
-          } else {
-            hasMore = false;
-          }
-        }
-        
-        if (allData.length > 0) {
-          const mapped = allData.map(r => ({
-            id: r.tombamento,
-            name: r.nome || 'Sem Descrição',
-            sector: r.local_sistema || 'Geral',
-            location: r.local_exato_ambiente || '',
-            originalLocation: r.local_exato_ambiente || '',
-            status: r.status || STATUS.PENDING,
-            condition: r.condicao || '',
-            systemName: r.nome_sistema || 'Não especificado',
-            year: new Date().getFullYear(),
-            isExtra: false,
-            logs: []
-          }));
-          setAssets(mapped);
-          localStorage.setItem('registrabem_data', JSON.stringify(mapped)); // backup cache
-        }
-      } catch (err) {
-        console.error("Erro ao buscar Supabase", err);
-        // Fallback para cache local se offline
-        const cached = localStorage.getItem('registrabem_data');
-        if (cached) setAssets(JSON.parse(cached));
-      }
-    };
-    fetchAssets();
-  }, []);
 
   const [search, setSearch] = useState('');
   const [selectedAsset, setSelectedAsset] = useState(null);
@@ -207,10 +83,6 @@ export default function App() {
   const [reportTab, setReportTab] = useState('missing');
   const [showSectorChange, setShowSectorChange] = useState(false);
   const [newSector, setNewSector] = useState('');
-
-  useEffect(() => {
-    localStorage.setItem('registrabem_data', JSON.stringify(assets));
-  }, [assets]);
 
   useEffect(() => {
     if (sector) localStorage.setItem('registrabem_sector', sector);
@@ -243,32 +115,47 @@ export default function App() {
     setTimeout(() => setToast(null), 2500);
   };
 
+  const rollbackAssetChange = (previousAssets, previousSelected, message = 'Erro ao salvar. Alteração desfeita.') => {
+    setAssets(previousAssets);
+    setSelectedAsset(previousSelected);
+    showToast(message);
+  };
+
   // === HANDLERS ===
   const handleConfirm = async () => {
     if (!selectedAsset) return;
     if (!isAuthorized) {
-      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      showToast('Acesso restrito: apenas agentes autorizados podem editar.');
       return;
     }
+    const previousAssets = assets;
+    const previousSelected = selectedAsset;
     const newStatus = (selectedAsset.location && selectedAsset.location !== selectedAsset.originalLocation)
       ? STATUS.MOVED : STATUS.CONFIRMED;
     setAssets(prev => prev.map(a => a.id === selectedAsset.id ? { ...a, status: newStatus } : a));
     setSelectedAsset(prev => ({ ...prev, status: newStatus }));
-    showToast(newStatus === STATUS.CONFIRMED ? '✅ Item confirmado!' : '🔄 Marcado como movimentado!');
-    
+
     try {
-      await supabase.from('tabela_inicial')
+      const { error } = await supabase.from('tabela_inicial')
         .update({ status: newStatus })
         .eq('tombamento', selectedAsset.id);
-    } catch(e) { console.error("Erro BD", e); }
+      if (error) throw error;
+      showToast(newStatus === STATUS.CONFIRMED ? 'Item confirmado!' : 'Marcado como movimentado!');
+    } catch(e) {
+      console.error("Erro BD", e);
+      rollbackAssetChange(previousAssets, previousSelected);
+    }
   };
 
   const handleUpdateLocation = async () => {
     if (!selectedAsset || !newLocation.trim() || newLocation === selectedAsset.location) return;
     if (!isAuthorized) {
-      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      showToast('Acesso restrito: apenas agentes autorizados podem editar.');
       return;
     }
+    const previousAssets = assets;
+    const previousSelected = selectedAsset;
+    const previousLocationInput = newLocation;
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
       from: selectedAsset.location || 'Não definido',
@@ -280,21 +167,30 @@ export default function App() {
     ));
     setSelectedAsset(prev => ({ ...prev, location: newLocation, status: newStatus, logs: [logEntry, ...prev.logs] }));
     setNewLocation('');
-    showToast('📍 Localização atualizada!');
-    
+
     try {
-      await supabase.from('tabela_inicial')
+      const { error } = await supabase.from('tabela_inicial')
         .update({ status: newStatus, local_exato_ambiente: newLocation })
         .eq('tombamento', selectedAsset.id);
-    } catch(e) { console.error("Erro BD", e); }
+      if (error) throw error;
+      showToast('Localização atualizada!');
+    } catch(e) {
+      console.error("Erro BD", e);
+      setNewLocation(previousLocationInput);
+      rollbackAssetChange(previousAssets, previousSelected);
+    }
   };
 
   const handleChangeSector = async () => {
     if (!selectedAsset || !newSector || newSector === selectedAsset.sector) return;
     if (!isAuthorized) {
-      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      showToast('Acesso restrito: apenas agentes autorizados podem editar.');
       return;
     }
+    const previousAssets = assets;
+    const previousSelected = selectedAsset;
+    const previousNewSector = newSector;
+    const previousShowSectorChange = showSectorChange;
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
       from: `Divisão: ${selectedAsset.sector}`,
@@ -306,41 +202,55 @@ export default function App() {
     setSelectedAsset(prev => ({ ...prev, sector: newSector, status: STATUS.MOVED, logs: [logEntry, ...prev.logs] }));
     setShowSectorChange(false);
     setNewSector('');
-    showToast('🔄 Divisão alterada!');
 
     try {
-      await supabase.from('tabela_inicial')
+      const { error } = await supabase.from('tabela_inicial')
         .update({ status: STATUS.MOVED, local_sistema: newSector })
         .eq('tombamento', selectedAsset.id);
-    } catch(e) { console.error("Erro BD", e); }
+      if (error) throw error;
+      showToast('Divisão alterada!');
+    } catch(e) {
+      console.error("Erro BD", e);
+      setNewSector(previousNewSector);
+      setShowSectorChange(previousShowSectorChange);
+      rollbackAssetChange(previousAssets, previousSelected);
+    }
   };
 
   const handleConditionChange = async (value) => {
     if (!selectedAsset) return;
     if (!isAuthorized) {
-      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      showToast('Acesso restrito: apenas agentes autorizados podem editar.');
       return;
     }
+    const previousAssets = assets;
+    const previousSelected = selectedAsset;
     setAssets(prev => prev.map(a =>
       a.id === selectedAsset.id ? { ...a, condition: value } : a
     ));
     setSelectedAsset(prev => ({ ...prev, condition: value }));
-    if (value) showToast(`📋 Condição: ${value}`);
 
     try {
-      await supabase.from('tabela_inicial')
+      const { error } = await supabase.from('tabela_inicial')
         .update({ condicao: value })
         .eq('tombamento', selectedAsset.id);
-    } catch(e) { console.error("Erro BD", e); }
+      if (error) throw error;
+      if (value) showToast(`Condição: ${value}`);
+    } catch(e) {
+      console.error("Erro BD", e);
+      rollbackAssetChange(previousAssets, previousSelected);
+    }
   };
 
   const handleAddExtra = async () => {
-    if (!extraTombamento.trim() || !extraLocation.trim()) { showToast('⚠️ Preencha tombamento e local!'); return; }
+    if (!extraTombamento.trim() || !extraLocation.trim()) { showToast('Preencha tombamento e local.'); return; }
     if (!isAuthorized) {
-      showToast('🚫 Acesso restrito: Apenas agentes autorizados podem editar.');
+      showToast('Acesso restrito: apenas agentes autorizados podem editar.');
       return;
     }
-    if (assets.some(a => a.id.toString() === extraTombamento.trim())) { showToast('⚠️ Tombamento já existe!'); return; }
+    if (assets.some(a => a.id.toString() === extraTombamento.trim())) { showToast('Tombamento já existe.'); return; }
+    const previousAssets = assets;
+    const previousForm = { extraTombamento, extraName, extraLocation };
     const newAsset = {
       id: extraTombamento.trim(), systemName: 'Item Extra (Manual)', sector,
       year: new Date().getFullYear(), name: extraName.trim() || `Bem #${extraTombamento.trim()}`,
@@ -350,10 +260,9 @@ export default function App() {
     };
     setAssets(prev => [newAsset, ...prev]);
     setShowAddExtra(false); setExtraTombamento(''); setExtraName(''); setExtraLocation('');
-    showToast('➕ Item Adicionado!');
 
     try {
-      await supabase.from('tabela_inicial').insert([{
+      const { error } = await supabase.from('tabela_inicial').insert([{
         tombamento: newAsset.id,
         local_sistema: newAsset.sector,
         nome: newAsset.name,
@@ -361,7 +270,17 @@ export default function App() {
         status: newAsset.status,
         condicao: newAsset.condition
       }]);
-    } catch(e) { console.error("Erro BD", e); }
+      if (error) throw error;
+      showToast('Item adicionado!');
+    } catch(e) {
+      console.error("Erro BD", e);
+      setAssets(previousAssets);
+      setShowAddExtra(true);
+      setExtraTombamento(previousForm.extraTombamento);
+      setExtraName(previousForm.extraName);
+      setExtraLocation(previousForm.extraLocation);
+      showToast('Erro ao salvar. Item extra não foi registrado.');
+    }
   };
 
 
@@ -395,16 +314,7 @@ export default function App() {
   // LOADING / AUTH SCREENS
   // ==============================
   if (authLoading) {
-    return (
-      <div className="auth-screen">
-        <div style={{ textAlign: 'center' }}>
-          <div className="pulse" style={{ marginBottom: '20px' }}>
-             <Package size={48} color="var(--primary)" />
-          </div>
-          <p style={{ color: 'var(--text-muted)' }}>Carregando acesso...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!session) {
@@ -413,105 +323,16 @@ export default function App() {
 
   if (!sector) {
     return (
-      <div className="app-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '500px', padding: '20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ display: 'inline-flex', padding: '16px', background: 'linear-gradient(135deg, var(--primary), #7C3AED)', borderRadius: '24px', marginBottom: '20px' }}>
-              <Package size={48} color="white" />
-            </div>
-            <h1 className="header-title" style={{ fontSize: '2.2rem', marginBottom: '8px' }}>Registra Bem</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Gestão Inteligente de Patrimônio</p>
-          </div>
-
-          <div className="glass-panel" style={{ padding: '24px' }}>
-            <h2 style={{ marginBottom: '20px', fontSize: '1.2rem', textAlign: 'center' }}>Selecione sua Divisão</h2>
-            <div className="sector-list" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
-              {sectors.map(s => {
-                const si = assets.filter(a => a.sector === s);
-                const done = si.filter(a => a.status !== STATUS.PENDING).length;
-                return (
-                  <button key={s} className="sector-btn" onClick={() => { setSector(s); setSearch(''); }}>
-                    <Building size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                    <span className="sector-btn-name">{getSectorName(s)}</span>
-                    <span className="sector-btn-count">{done}/{si.length}</span>
-                  </button>
-                );
-              })}
-              {sectors.length === 0 && <div className="empty-state">Nenhum setor disponível no momento.</div>}
-            </div>
-          </div>
-        </div>
-      </div>
+      <SectorSelector
+        assets={assets}
+        sectors={sectors}
+        onSelectSector={(selectedSector) => {
+          setSector(selectedSector);
+          setSearch('');
+        }}
+      />
     );
   }
-
-  // ==============================
-  // REPORT VIEW
-  // ==============================
-  const renderReport = () => {
-    const pending = sectorAssets.filter(a => a.status === STATUS.PENDING);
-    const moved = sectorAssets.filter(a => a.status === STATUS.MOVED);
-    const extras = sectorAssets.filter(a => a.isExtra);
-    const tabData = reportTab === 'missing' ? pending : reportTab === 'moved' ? moved : extras;
-
-    return (
-      <>
-        <div className="progress-section">
-          <div className="progress-header">
-            <span className="progress-label">Progresso da Auditoria</span>
-            <span className="progress-value">{progress}%</span>
-          </div>
-          <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-        </div>
-
-        <div className="stats-grid">
-          <div className="stat-card"><div className="stat-value">{stats.total}</div><div className="stat-label">Total</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: '#34D399' }}>{stats.confirmed}</div><div className="stat-label">Confirmados</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: '#FBBF24' }}>{stats.moved}</div><div className="stat-label">Movimentados</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: '#94A3B8' }}>{stats.pending}</div><div className="stat-label">Pendentes</div></div>
-        </div>
-
-        <div className="export-actions">
-          <button className="export-btn" onClick={handleDownloadOds}><FileSpreadsheet size={16} /> Baixar ODS</button>
-        </div>
-
-        <div className="filter-pills">
-          <button className={`pill ${reportTab === 'missing' ? 'active' : ''}`} onClick={() => setReportTab('missing')}>
-            ⏳ Faltantes <span className="pill-count">({pending.length})</span>
-          </button>
-          <button className={`pill ${reportTab === 'moved' ? 'active' : ''}`} onClick={() => setReportTab('moved')}>
-            🔄 Movimentados <span className="pill-count">({moved.length})</span>
-          </button>
-          <button className={`pill ${reportTab === 'extras' ? 'active' : ''}`} onClick={() => setReportTab('extras')}>
-            ➕ Extras <span className="pill-count">({extras.length})</span>
-          </button>
-        </div>
-
-        <div>
-          {tabData.length === 0 && <div className="empty-state"><div className="empty-state-icon"><CheckCircle size={40} /></div>Nenhum item nesta categoria.</div>}
-          {tabData.map(item => (
-            <div key={item.id} className="report-item">
-              <div className="report-item-header">
-                <span className="report-item-name">{item.name.substring(0, 45)}{item.name.length > 45 ? '...' : ''}</span>
-                <span className="report-item-id">#{item.id}</span>
-              </div>
-              {reportTab === 'moved' && (
-                <div className="report-item-detail">
-                  <MapPin size={12} /> {item.originalLocation || 'N/D'} → {item.location}
-                </div>
-              )}
-              {reportTab === 'missing' && item.location && (
-                <div className="report-item-detail"><MapPin size={12} /> {item.location}</div>
-              )}
-              {reportTab === 'extras' && (
-                <div className="report-item-detail"><MapPin size={12} /> {item.location}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  };
 
   // ==============================
   // DASHBOARD VIEW
@@ -879,7 +700,16 @@ export default function App() {
               {view === 'users' && <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Gerencie os acessos dos usuários cadastrados</span>}
             </div>
 
-            {view === 'users' && isAdmin ? renderUserManagement() : view === 'dashboard' ? renderDashboard() : view === 'report' ? renderReport() : (
+            {view === 'users' && isAdmin ? renderUserManagement() : view === 'dashboard' ? renderDashboard() : view === 'report' ? (
+              <ReportView
+                sectorAssets={sectorAssets}
+                reportTab={reportTab}
+                setReportTab={setReportTab}
+                stats={stats}
+                progress={progress}
+                onDownloadOds={handleDownloadOds}
+              />
+            ) : (
             <>
               {/* Stats */}
               <div className="stats-grid">
