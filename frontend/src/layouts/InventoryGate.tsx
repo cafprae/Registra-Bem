@@ -54,12 +54,12 @@ function ProfileGate() {
 
 export default function InventoryGate() {
   return (
-    <InventoryProvider>
-      <UIProvider>
-        <FilterProvider>
+    <UIProvider>
+      <FilterProvider>
+        <InventoryProvider>
           <AuthGate />
-        </FilterProvider>
-      </UIProvider>
-    </InventoryProvider>
+        </InventoryProvider>
+      </FilterProvider>
+    </UIProvider>
   );
 }
