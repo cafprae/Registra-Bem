@@ -5,6 +5,7 @@ const CACHE_KEY = 'registrabem_data';
 
 const mapAssetRow = (row) => ({
   id: row.tombamento,
+  tombamento: row.tombamento,
   name: row.nome || 'Sem Descrição',
   sector: row.local_sistema || 'Geral',
   location: row.local_exato_ambiente || '',

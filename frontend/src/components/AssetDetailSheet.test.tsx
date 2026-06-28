@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 // @ts-nocheck - Migração gradual para TypeScript
 // @vitest-environment jsdom
 import React from 'react';
@@ -12,16 +12,20 @@ vi.mock('../context/InventoryContext', () => ({
 
 vi.mock('lucide-react', () => ({
   X: () => <div data-testid="icon-x" />,
-  Copy: () => <div data-testid="icon-copy" />, // ✨ OLHA A MARMOTA AQUI!
+  Copy: () => <div data-testid="icon-copy" />,
   Trash2: () => <div data-testid="icon-trash" />,
   Undo: () => <div data-testid="icon-undo" />,
   Save: () => <div data-testid="icon-save" />,
-  Check: () => <div data-testid="icon-check" />
+  Check: () => <div data-testid="icon-check" />,
+  CheckCircle2: () => <div data-testid="icon-check-circle-2" />,
+  ArrowRightLeft: () => <div data-testid="icon-arrow-right-left" />,
+  Clock: () => <div data-testid="icon-clock" />,
+  AlertTriangle: () => <div data-testid="icon-alert-triangle" />,
+  History: () => <div data-testid="icon-history" />
 }));
 
 import { useInventory } from '../context/InventoryContext';
-// 👇 Ajustei para ./ porque o teste está na mesma pasta que o arquivo original!
-import AssetDetailSheet from './AssetDetailSheet'; 
+import AssetDetailSheet from './AssetDetailSheet';
 
 describe('AssetDetailSheet', () => {
   const mockSetSelectedAsset = vi.fn();
@@ -34,7 +38,7 @@ describe('AssetDetailSheet', () => {
 
   it('renders the asset name correctly', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', name: 'Test Asset', location: '', originalLocation: '', status: 'confirmed', logs: [] },
+      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: '', originalLocation: '', status: 'confirmed', logs: [] },
       setSelectedAsset: mockSetSelectedAsset,
       newLocation: '',
       setNewLocation: mockSetNewLocation,
@@ -59,9 +63,9 @@ describe('AssetDetailSheet', () => {
 
   it('disables the Save button when the location input is empty', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
+      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
       setSelectedAsset: mockSetSelectedAsset,
-      newLocation: '', // empty -> Save should be disabled
+      newLocation: '',
       setNewLocation: mockSetNewLocation,
       showSectorChange: false,
       setShowSectorChange: vi.fn(),
@@ -85,7 +89,7 @@ describe('AssetDetailSheet', () => {
 
   it('calls handleUndoRegistration when Delete (Desfazer Lançamento) is clicked and confirmed', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
+      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
       setSelectedAsset: mockSetSelectedAsset,
       newLocation: '',
       setNewLocation: mockSetNewLocation,
@@ -103,7 +107,6 @@ describe('AssetDetailSheet', () => {
       handleUndoValidation: vi.fn(),
     });
 
-    // Mock window.confirm to simulate user confirming deletion
     const originalConfirm = window.confirm;
     window.confirm = vi.fn(() => true);
 
@@ -115,7 +118,6 @@ describe('AssetDetailSheet', () => {
     expect(window.confirm).toHaveBeenCalled();
     expect(mockHandleUndoRegistration).toHaveBeenCalledWith('123');
 
-    // restore
     window.confirm = originalConfirm;
   });
 });

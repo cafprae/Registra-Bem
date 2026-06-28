@@ -63,12 +63,12 @@ export default function AssetDetailSheet() {
                     {selectedAsset.validation ? (
                       <div style={{ display: 'flex', gap: 8 }}>
                         <span className={`condition-badge condition-${selectedAsset.validation.toLowerCase()}`} style={{ alignSelf: 'center' }}>{selectedAsset.validation}</span>
-                        <button type="button" className="btn btn-outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUndoValidation(selectedAsset.id); }}>Desfazer Validação</button>
+                        <button type="button" className="btn btn-outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUndoValidation(selectedAsset.tombamento); }}>Desfazer Validação</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" className="btn btn-success" style={{ flex: 1 }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleConfirmRecebimento(selectedAsset.id); }}>Confirmar Recebimento</button>
-                        <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRejectTransfer(selectedAsset.id); }}>Rejeitar Transferência</button>
+                        <button type="button" className="btn btn-success" style={{ flex: 1 }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleConfirmRecebimento(selectedAsset.tombamento); }}>Confirmar Recebimento</button>
+                        <button type="button" className="btn btn-danger" style={{ flex: 1 }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRejectTransfer(selectedAsset.tombamento); }}>Rejeitar Transferência</button>
                       </div>
                     )}
                   </div>
@@ -88,7 +88,7 @@ export default function AssetDetailSheet() {
                           e.preventDefault();
                           e.stopPropagation();
                           if (window.confirm('Deseja realmente desfazer o registro deste bem?')) {
-                            handleUndoRegistration(selectedAsset.id);
+                            handleUndoRegistration(selectedAsset.tombamento);
                           }
                         }}
                       >
