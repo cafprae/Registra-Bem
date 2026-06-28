@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-// IMPORTAÇÃO DO CONTEXTO QUE ESTAVA FALTANDO:
-import { InventoryProvider } from './context/InventoryContext';
+// IMPORTAÇÃO DOS CONTEXTOS:
+import { UIProvider } from './context/UIContext';
+import { FilterProvider } from './context/FilterContext';
 
 import AdminRoute from './routes/AdminRoute';
 import UserManagement from './pages/UserManagement';
@@ -12,29 +13,31 @@ import ReportsPage from './pages/ReportsPage';
 
 export default function App() {
   return (
-    // O PROVIDER ABRAÇANDO TODAS AS ROTAS DO SISTEMA:
-    <InventoryProvider>
-      <Routes>
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <UserManagement />
-            </AdminRoute>
-          }
-        />
+    // PROVIDERS GLOBAIS (UI e Filter no nível mais alto)
+    <UIProvider>
+      <FilterProvider>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
+            }
+          />
 
-        <Route path="/" element={<InventoryGate />}>
-          <Route index element={<Navigate to="/inventory" replace />} />
-          <Route element={<InventoryLayout />}>
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="reports" element={<ReportsPage />} />
+          <Route path="/" element={<InventoryGate />}>
+            <Route index element={<Navigate to="/inventory" replace />} />
+            <Route element={<InventoryLayout />}>
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/inventory" replace />} />
-      </Routes>
-    </InventoryProvider>
+          <Route path="*" element={<Navigate to="/inventory" replace />} />
+        </Routes>
+      </FilterProvider>
+    </UIProvider>
   );
 }
