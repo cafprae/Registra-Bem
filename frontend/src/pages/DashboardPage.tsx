@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Building, Database } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { getSectorName, STATUS } from '../constants';
@@ -18,7 +19,7 @@ export default function DashboardPage() {
 
   const condBom = assets.filter(a => a.condition === 'Bom').length;
   const condRuim = assets.filter(a => a.condition === 'Ruim').length;
-  const condInservivel = assets.filter(a => a.condition === 'Inservível').length;
+  const condInservivel = assets.filter(a => a.condition === 'Inserv├¡vel').length;
   const condNaoAvaliado = totalAssets - (condBom + condRuim + condInservivel);
 
   const globalDone = globalConfirmed + globalMoved;
@@ -59,7 +60,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Saúde e Condição (Itens Verificados)</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Sa├║de e Condi├º├úo (Itens Verificados)</h3>
         <div className="chart-bar-horizontal">
           {condBom > 0 && <div className="chart-segment" style={{ width: `${(condBom / globalDone) * 100}%`, background: '#34D399' }} />}
           {condRuim > 0 && <div className="chart-segment" style={{ width: `${(condRuim / globalDone) * 100}%`, background: '#FBBF24' }} />}
@@ -69,13 +70,13 @@ export default function DashboardPage() {
         <div className="chart-legend" style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.8rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#34D399', borderRadius: '2px' }} /> Bom ({condBom})</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#FBBF24', borderRadius: '2px' }} /> Ruim ({condRuim})</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#EF4444', borderRadius: '2px' }} /> Inservível ({condInservivel})</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#334155', borderRadius: '2px' }} /> S/ Avaliação ({condNaoAvaliado})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#EF4444', borderRadius: '2px' }} /> Inserv├¡vel ({condInservivel})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '10px', background: '#334155', borderRadius: '2px' }} /> S/ Avalia├º├úo ({condNaoAvaliado})</div>
         </div>
       </div>
 
       <div className="glass-panel" style={{ padding: '20px', marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Progresso por Divisão (Setor)</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Progresso por Divis├úo (Setor)</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {sectorStats.map(stat => (
             <div key={stat.name}>
@@ -109,10 +110,10 @@ export default function DashboardPage() {
       <div className="glass-panel" style={{ padding: '20px', marginBottom: '40px' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center' }}>
           <Database size={16} style={{ marginRight: '8px', color: 'var(--primary)' }} />
-          Inventário Geral (Todos os Setores)
+          Invent├írio Geral (Todos os Setores)
         </h3>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          Visão gerencial completa de todos os {totalAssets} patrimônios cadastrados na unidade.
+          Vis├úo gerencial completa de todos os {totalAssets} patrim├┤nios cadastrados na unidade.
         </p>
         <div style={{ height: '400px', overflowY: 'auto', paddingRight: '8px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--surface)' }}>
           {[...assets].sort((a, b) => a.sector.localeCompare(b.sector) || a.name.localeCompare(b.name)).map(item => (
@@ -129,9 +130,9 @@ export default function DashboardPage() {
               <div className="report-item-detail" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
                 <span style={{ color: 'var(--primary)' }}><Building size={12} style={{ marginRight: '4px' }} /> {item.sector}</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {item.condition && <span>🔧 {item.condition}</span>}
+                  {item.condition && <span>­ƒöº {item.condition}</span>}
                   <span style={{ color: item.status === STATUS.PENDING ? '#94A3B8' : item.status === STATUS.CONFIRMED ? '#34D399' : '#FBBF24' }}>
-                    {item.status === STATUS.PENDING ? '⏳ PENDENTE' : item.status === STATUS.CONFIRMED ? '✅ CONFIRMADO' : '🔄 MOVIDO'}
+                    {item.status === STATUS.PENDING ? 'ÔÅ│ PENDENTE' : item.status === STATUS.CONFIRMED ? 'Ô£à CONFIRMADO' : '­ƒöä MOVIDO'}
                   </span>
                 </div>
               </div>

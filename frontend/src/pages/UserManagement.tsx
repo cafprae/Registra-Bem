@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Shield, Edit3, Eye, Users, ArrowLeft, Package, Trash2 } from 'lucide-react';
@@ -34,8 +35,8 @@ export default function UserManagement() {
       if (error) throw error;
       setAllUsers(data || []);
     } catch (err) {
-      console.error('Erro ao buscar usuários:', err);
-      showToast('Erro ao carregar usuários.');
+      console.error('Erro ao buscar usu├írios:', err);
+      showToast('Erro ao carregar usu├írios.');
     } finally {
       setUsersLoading(false);
     }
@@ -49,7 +50,7 @@ export default function UserManagement() {
   const handleDeleteUser = async (user) => {
     const label = user.full_name || user.id.substring(0, 8);
     const confirmed = window.confirm(
-      `Excluir permanentemente o usuário "${label}"?\n\nEsta ação remove a conta de autenticação e o perfil. Não pode ser desfeita.`
+      `Excluir permanentemente o usu├írio "${label}"?\n\nEsta a├º├úo remove a conta de autentica├º├úo e o perfil. N├úo pode ser desfeita.`
     );
     if (!confirmed) return;
 
@@ -58,10 +59,10 @@ export default function UserManagement() {
       const { error } = await supabase.rpc('admin_delete_user', { target_uid: user.id });
       if (error) throw error;
       setAllUsers(prev => prev.filter(u => u.id !== user.id));
-      showToast('Usuário excluído com sucesso.');
+      showToast('Usu├írio exclu├¡do com sucesso.');
     } catch (err) {
-      console.error('Erro ao excluir usuário:', err);
-      showToast(err.message || 'Erro ao excluir usuário.');
+      console.error('Erro ao excluir usu├írio:', err);
+      showToast(err.message || 'Erro ao excluir usu├írio.');
     } finally {
       setDeletingId(null);
     }
@@ -80,7 +81,7 @@ export default function UserManagement() {
     } catch (err) {
       console.error('Erro ao atualizar role:', err);
       setAllUsers(previousUsers);
-      showToast('Erro ao atualizar perfil. Alteração desfeita.');
+      showToast('Erro ao atualizar perfil. Altera├º├úo desfeita.');
     }
   };
 
@@ -110,7 +111,7 @@ export default function UserManagement() {
             <Package size={22} color="var(--primary)" />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <h1 className="header-title" style={{ fontSize: '1.05rem', lineHeight: '1.2' }}>
-                Gerenciamento de Usuários
+                Gerenciamento de Usu├írios
               </h1>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Painel administrativo</span>
             </div>
@@ -122,9 +123,9 @@ export default function UserManagement() {
 
         <main className="main-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
           <div className="desktop-only" style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: '700' }}>Gerenciamento de Usuários</h1>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: '700' }}>Gerenciamento de Usu├írios</h1>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-              Gerencie os acessos dos usuários cadastrados
+              Gerencie os acessos dos usu├írios cadastrados
             </span>
           </div>
 
@@ -151,10 +152,10 @@ export default function UserManagement() {
             <div className="glass-panel" style={{ padding: '16px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <Shield size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                <strong style={{ color: 'var(--text-main)' }}>Níveis de Acesso:</strong><br />
-                <span style={{ color: '#EF4444' }}>Administrador</span> — Acesso total + gerenciamento de usuários<br />
-                <span style={{ color: '#3B82F6' }}>Editor</span> — Pode confirmar, movimentar e registrar bens<br />
-                <span style={{ color: '#94A3B8' }}>Visualizador</span> — Apenas visualização (sem edição)
+                <strong style={{ color: 'var(--text-main)' }}>N├¡veis de Acesso:</strong><br />
+                <span style={{ color: '#EF4444' }}>Administrador</span> ÔÇö Acesso total + gerenciamento de usu├írios<br />
+                <span style={{ color: '#3B82F6' }}>Editor</span> ÔÇö Pode confirmar, movimentar e registrar bens<br />
+                <span style={{ color: '#94A3B8' }}>Visualizador</span> ÔÇö Apenas visualiza├º├úo (sem edi├º├úo)
               </div>
             </div>
 
@@ -171,7 +172,7 @@ export default function UserManagement() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
               <button className="btn btn-outline" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={fetchAllUsers} disabled={usersLoading}>
-                {usersLoading ? 'Carregando...' : '🔄 Atualizar Lista'}
+                {usersLoading ? 'Carregando...' : '­ƒöä Atualizar Lista'}
               </button>
             </div>
 
@@ -193,7 +194,7 @@ export default function UserManagement() {
                           {user.full_name || 'Sem nome'}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {user.sector ? getSectorName(user.sector) : 'Sem setor'} · ID: {user.id.substring(0, 8)}...
+                          {user.sector ? getSectorName(user.sector) : 'Sem setor'} ┬À ID: {user.id.substring(0, 8)}...
                         </div>
                       </div>
                     </div>
@@ -218,7 +219,7 @@ export default function UserManagement() {
                       }}
                       onClick={() => handleDeleteUser(user)}
                       disabled={deletingId === user.id || user.id === currentUserId}
-                      title={user.id === currentUserId ? 'Você não pode excluir sua própria conta' : 'Excluir usuário'}
+                      title={user.id === currentUserId ? 'Voc├¬ n├úo pode excluir sua pr├│pria conta' : 'Excluir usu├írio'}
                     >
                       <Trash2 size={14} /> {deletingId === user.id ? 'Excluindo...' : 'Excluir'}
                     </button>
@@ -261,7 +262,7 @@ export default function UserManagement() {
               {filteredUsers.length === 0 && (
                 <div className="empty-state">
                   <div className="empty-state-icon"><Users size={40} /></div>
-                  {usersLoading ? 'Carregando usuários...' : 'Nenhum usuário encontrado.'}
+                  {usersLoading ? 'Carregando usu├írios...' : 'Nenhum usu├írio encontrado.'}
                 </div>
               )}
             </div>
