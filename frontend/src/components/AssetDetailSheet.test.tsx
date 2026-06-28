@@ -10,6 +10,10 @@ vi.mock('../context/InventoryContext', () => ({
   useInventory: vi.fn(),
 }));
 
+vi.mock('../context/UIContext', () => ({
+  useUI: vi.fn(),
+}));
+
 vi.mock('lucide-react', () => ({
   X: () => <div data-testid="icon-x" />,
   Copy: () => <div data-testid="icon-copy" />,
@@ -25,6 +29,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
 import AssetDetailSheet from './AssetDetailSheet';
 
 describe('AssetDetailSheet', () => {
@@ -38,14 +43,7 @@ describe('AssetDetailSheet', () => {
 
   it('renders the asset name correctly', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: '', originalLocation: '', status: 'confirmed', logs: [] },
-      setSelectedAsset: mockSetSelectedAsset,
-      newLocation: '',
-      setNewLocation: mockSetNewLocation,
-      showSectorChange: false,
-      setShowSectorChange: vi.fn(),
-      newSector: '',
-      setNewSector: vi.fn(),
+      sector: 'Test Sector',
       handleConfirm: vi.fn(),
       handleUpdateLocation: vi.fn(),
       handleChangeSector: vi.fn(),
@@ -56,6 +54,33 @@ describe('AssetDetailSheet', () => {
       handleUndoValidation: vi.fn(),
     });
 
+    useUI.mockReturnValue({
+      selectedAsset: { id: 123, tombamento: 123, name: 'Test Asset', systemName: 'Test', sector: 'Test Sector', year: 2024, location: '', originalLocation: '', status: 'confirmed', condition: '', isExtra: false, logs: [] },
+      setSelectedAsset: mockSetSelectedAsset,
+      newLocation: '',
+      setNewLocation: mockSetNewLocation,
+      isSectorChangeOpen: false,
+      openSectorChange: vi.fn(),
+      closeSectorChange: vi.fn(),
+      newSector: '',
+      setNewSector: vi.fn(),
+      isAddExtraModalOpen: false,
+      openAddExtraModal: vi.fn(),
+      closeAddExtraModal: vi.fn(),
+      extraTombamento: '',
+      setExtraTombamento: vi.fn(),
+      extraName: '',
+      setExtraName: vi.fn(),
+      extraLocation: '',
+      setExtraLocation: vi.fn(),
+      toast: null,
+      reportTab: 'missing',
+      setReportTab: vi.fn(),
+      openAsset: vi.fn(),
+      closeDetailSheet: vi.fn(),
+      showToast: vi.fn(),
+    });
+
     render(<AssetDetailSheet />);
 
     expect(screen.getByText('Test Asset')).toBeTruthy();
@@ -63,14 +88,7 @@ describe('AssetDetailSheet', () => {
 
   it('disables the Save button when the location input is empty', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
-      setSelectedAsset: mockSetSelectedAsset,
-      newLocation: '',
-      setNewLocation: mockSetNewLocation,
-      showSectorChange: false,
-      setShowSectorChange: vi.fn(),
-      newSector: '',
-      setNewSector: vi.fn(),
+      sector: 'Test Sector',
       handleConfirm: vi.fn(),
       handleUpdateLocation: vi.fn(),
       handleChangeSector: vi.fn(),
@@ -79,6 +97,33 @@ describe('AssetDetailSheet', () => {
       handleConfirmRecebimento: vi.fn(),
       handleRejectTransfer: vi.fn(),
       handleUndoValidation: vi.fn(),
+    });
+
+    useUI.mockReturnValue({
+      selectedAsset: { id: 123, tombamento: 123, name: 'Test Asset', systemName: 'Test', sector: 'Test Sector', year: 2024, location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', condition: '', isExtra: false, logs: [] },
+      setSelectedAsset: mockSetSelectedAsset,
+      newLocation: '',
+      setNewLocation: mockSetNewLocation,
+      isSectorChangeOpen: false,
+      openSectorChange: vi.fn(),
+      closeSectorChange: vi.fn(),
+      newSector: '',
+      setNewSector: vi.fn(),
+      isAddExtraModalOpen: false,
+      openAddExtraModal: vi.fn(),
+      closeAddExtraModal: vi.fn(),
+      extraTombamento: '',
+      setExtraTombamento: vi.fn(),
+      extraName: '',
+      setExtraName: vi.fn(),
+      extraLocation: '',
+      setExtraLocation: vi.fn(),
+      toast: null,
+      reportTab: 'missing',
+      setReportTab: vi.fn(),
+      openAsset: vi.fn(),
+      closeDetailSheet: vi.fn(),
+      showToast: vi.fn(),
     });
 
     render(<AssetDetailSheet />);
@@ -89,14 +134,7 @@ describe('AssetDetailSheet', () => {
 
   it('calls handleUndoRegistration when Delete (Desfazer Lançamento) is clicked and confirmed', () => {
     useInventory.mockReturnValue({
-      selectedAsset: { id: '123', tombamento: '123', name: 'Test Asset', location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', logs: [] },
-      setSelectedAsset: mockSetSelectedAsset,
-      newLocation: '',
-      setNewLocation: mockSetNewLocation,
-      showSectorChange: false,
-      setShowSectorChange: vi.fn(),
-      newSector: '',
-      setNewSector: vi.fn(),
+      sector: 'Test Sector',
       handleConfirm: vi.fn(),
       handleUpdateLocation: vi.fn(),
       handleChangeSector: vi.fn(),
@@ -105,6 +143,33 @@ describe('AssetDetailSheet', () => {
       handleConfirmRecebimento: vi.fn(),
       handleRejectTransfer: vi.fn(),
       handleUndoValidation: vi.fn(),
+    });
+
+    useUI.mockReturnValue({
+      selectedAsset: { id: 123, tombamento: 123, name: 'Test Asset', systemName: 'Test', sector: 'Test Sector', year: 2024, location: 'Sala 1', originalLocation: 'Sala 1', status: 'confirmed', condition: '', isExtra: false, logs: [] },
+      setSelectedAsset: mockSetSelectedAsset,
+      newLocation: '',
+      setNewLocation: mockSetNewLocation,
+      isSectorChangeOpen: false,
+      openSectorChange: vi.fn(),
+      closeSectorChange: vi.fn(),
+      newSector: '',
+      setNewSector: vi.fn(),
+      isAddExtraModalOpen: false,
+      openAddExtraModal: vi.fn(),
+      closeAddExtraModal: vi.fn(),
+      extraTombamento: '',
+      setExtraTombamento: vi.fn(),
+      extraName: '',
+      setExtraName: vi.fn(),
+      extraLocation: '',
+      setExtraLocation: vi.fn(),
+      toast: null,
+      reportTab: 'missing',
+      setReportTab: vi.fn(),
+      openAsset: vi.fn(),
+      closeDetailSheet: vi.fn(),
+      showToast: vi.fn(),
     });
 
     const originalConfirm = window.confirm;
@@ -116,7 +181,7 @@ describe('AssetDetailSheet', () => {
     fireEvent.click(deleteButton);
 
     expect(window.confirm).toHaveBeenCalled();
-    expect(mockHandleUndoRegistration).toHaveBeenCalledWith('123');
+    expect(mockHandleUndoRegistration).toHaveBeenCalledWith(123);
 
     window.confirm = originalConfirm;
   });

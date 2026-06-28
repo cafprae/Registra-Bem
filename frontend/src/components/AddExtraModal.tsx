@@ -1,22 +1,23 @@
 import { Plus, X } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
 
 export default function AddExtraModal() {
+  const { handleAddExtra } = useInventory();
   const {
-    showAddExtra, setShowAddExtra,
+    isAddExtraModalOpen: showAddExtra, closeAddExtraModal: closeModal,
     extraTombamento, setExtraTombamento,
     extraName, setExtraName,
     extraLocation, setExtraLocation,
-    handleAddExtra,
-  } = useInventory();
+  } = useUI();
 
   return (
-    <div className={`bottom-sheet-overlay center-modal-desktop ${showAddExtra ? 'open' : ''}`} onClick={() => setShowAddExtra(false)}>
+    <div className={`bottom-sheet-overlay center-modal-desktop ${showAddExtra ? 'open' : ''}`} onClick={closeModal}>
       <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: '700' }}>Registrar Bem Não Listado</h2>
-          <button className="btn-icon" onClick={() => setShowAddExtra(false)}><X size={18} /></button>
+          <button className="btn-icon" onClick={closeModal}><X size={18} /></button>
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '20px' }}>
           Encontrou um bem que não está na lista do seu setor? Registre-o abaixo.

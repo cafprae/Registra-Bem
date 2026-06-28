@@ -5,19 +5,12 @@ import { supabase } from '../supabaseClient';
 import { STATUS, assetMatchesProfileSector, getSectorStorageValue } from '../constants';
 import { useAssets } from '../hooks/useAssets';
 import { useAuthProfile } from '../hooks/useAuthProfile';
-import { useUI } from './UIContext';
-import { useFilters } from './FilterContext';
-import type { InventoryContextType } from '../types';
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
 
 export function InventoryProvider({ children }) {
   const { session, profile, authLoading, isAdmin, isAuthorized } = useAuthProfile(supabase);
   const { assets, setAssets } = useAssets(supabase);
-
-  // Subscribe to UI and filter contexts to access their state/actions
-  const ui = useUI();
-  const filters = useFilters();
 
   const sector = profile?.sector ?? null;
   const sectorStorage = getSectorStorageValue(sector);
@@ -397,7 +390,7 @@ export function InventoryProvider({ children }) {
   );
 }
 
-export function useInventory(): InventoryContextType {
+export function useInventory() {
   const ctx = useContext(InventoryContext);
   if (!ctx) throw new Error('useInventory must be used within InventoryProvider');
   return ctx;

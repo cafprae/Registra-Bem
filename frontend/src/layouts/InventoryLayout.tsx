@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
 import { getRoleLabel, getSectorName } from '../constants';
 import AssetDetailSheet from '../components/AssetDetailSheet';
 import AddExtraModal from '../components/AddExtraModal';
@@ -18,9 +19,9 @@ const PAGE_META = {
 export default function InventoryLayout() {
   const { pathname } = useLocation();
   const {
-    session, profile, authLoading, isAdmin, isAuthorized, sector, toast,
-    setShowAddExtra,
+    session, profile, authLoading, isAdmin, isAuthorized, sector,
   } = useInventory();
+  const { toast, openAddExtraModal } = useUI();
 
   const meta = PAGE_META[pathname] ?? PAGE_META['/inventory'];
   const isInventory = pathname === '/inventory';
@@ -94,7 +95,7 @@ export default function InventoryLayout() {
 
             {isInventory && (
               <div className="desktop-only" style={{ marginTop: 'auto', width: '100%' }}>
-                <button className="nav-item nav-item-add" onClick={() => setShowAddExtra(true)}>
+                <button className="nav-item nav-item-add" onClick={() => openAddExtraModal}>
                   <Plus size={20} /> <span className="nav-label">Registrar Item Extra</span>
                 </button>
               </div>
@@ -116,7 +117,7 @@ export default function InventoryLayout() {
       </div>
 
       {isInventory && (
-        <button className="fab mobile-only" onClick={() => setShowAddExtra(true)} title="Registrar item extra">
+        <button className="fab mobile-only" onClick={() => openAddExtraModal} title="Registrar item extra">
           <Plus size={26} />
         </button>
       )}

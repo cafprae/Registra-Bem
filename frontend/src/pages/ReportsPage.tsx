@@ -1,10 +1,10 @@
 import ReportView from '../components/ReportView';
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
 
 export default function ReportsPage() {
-  const {
-    sectorAssets, reportTab, setReportTab, stats, progress, handleDownloadOds,
-  } = useInventory();
+  const { sectorAssets, stats, progress, handleDownloadOds } = useInventory();
+  const { reportTab, setReportTab } = useUI();
 
   return (
     <ReportView

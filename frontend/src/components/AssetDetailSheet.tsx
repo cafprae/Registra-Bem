@@ -2,17 +2,21 @@ import {
   CheckCircle, ArrowRightLeft, X, History, AlertTriangle, Copy
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
 import { STATUS, SECTOR_OPTIONS, assetMatchesProfileSector } from '../constants';
 import { getStatusClass, getStatusIcon, getStatusLabel } from '../utils/assetStatus';
 
 export default function AssetDetailSheet() {
   const {
-    selectedAsset, setSelectedAsset, sector,
-    newLocation, setNewLocation,
-    showSectorChange, setShowSectorChange, newSector, setNewSector,
-    handleConfirm, handleUpdateLocation, handleChangeSector, handleConditionChange, handleUndoRegistration,
+    sector, handleConfirm, handleUpdateLocation, handleChangeSector, handleConditionChange, handleUndoRegistration,
     handleConfirmRecebimento, handleRejectTransfer, handleUndoValidation,
   } = useInventory();
+  const {
+    selectedAsset, setSelectedAsset,
+    newLocation, setNewLocation,
+    isSectorChangeOpen: showSectorChange, openSectorChange: openSectorChangeFn,
+    newSector, setNewSector,
+  } = useUI();
 
   const userMatchesAssetSector = selectedAsset && sector && assetMatchesProfileSector(selectedAsset.sector, sector);
   const isMoved = selectedAsset && selectedAsset.status === STATUS.MOVED;
@@ -99,7 +103,7 @@ export default function AssetDetailSheet() {
                       type="button"
                       className="btn btn-outline"
                       style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', fontSize: '0.95rem', fontWeight: 600 }}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSectorChange(!showSectorChange); setNewSector(''); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); showSectorChange ? setNewSector('') : openSectorChangeFn(); setNewSector(''); }}
                     >
                       <ArrowRightLeft size={18} /> Trocar Divisão
                     </button>

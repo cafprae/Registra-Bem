@@ -1,16 +1,15 @@
 import { Search, MapPin, Copy } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
+import { useUI } from '../context/UIContext';
+import { useFilters, useFilteredAssets } from '../context/FilterContext';
 import { STATUS } from '../constants';
 import { getStatusClass, getStatusIcon, getStatusLabel } from '../utils/assetStatus';
 
 export default function InventoryPage() {
-  const {
-    sectorAssets, filteredAssets, stats, progress,
-    search, setSearch, statusFilter, setStatusFilter,
-    conditionFilter, setConditionFilter,
-    openAsset,
-  } = useInventory();
-
+  const { sectorAssets, stats, progress } = useInventory();
+  const { search, statusFilter, conditionFilter, setSearch, setStatusFilter, setConditionFilter } = useFilters();
+  const { openAsset } = useUI();
+  const filteredAssets = useFilteredAssets(sectorAssets);
   const countBom = sectorAssets.filter(a => a.condition === 'Bom').length;
   const countRuim = sectorAssets.filter(a => a.condition === 'Ruim').length;
   const countInservivel = sectorAssets.filter(a => a.condition === 'Inservível').length;
