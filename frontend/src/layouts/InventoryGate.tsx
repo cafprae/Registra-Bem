@@ -4,8 +4,6 @@ import { supabase } from '../supabaseClient';
 import Auth from '../Auth';
 import LoadingScreen from '../components/LoadingScreen';
 import { InventoryProvider, useInventory } from '../context/InventoryContext';
-import { UIProvider } from '../context/UIContext';
-import { FilterProvider } from '../context/FilterContext';
 
 function AuthGate() {
   const { session, authLoading } = useInventory();
@@ -54,12 +52,8 @@ function ProfileGate() {
 
 export default function InventoryGate() {
   return (
-    <UIProvider>
-      <FilterProvider>
-        <InventoryProvider>
-          <AuthGate />
-        </InventoryProvider>
-      </FilterProvider>
-    </UIProvider>
+    <InventoryProvider>
+      <AuthGate />
+    </InventoryProvider>
   );
 }
