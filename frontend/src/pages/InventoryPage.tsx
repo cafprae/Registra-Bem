@@ -1,9 +1,11 @@
-import { Search, MapPin, Copy } from 'lucide-react';
+import { useState } from 'react';
+import { Search, MapPin, Copy, ScanBarcode } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useUI } from '../context/UIContext';
 import { useFilters, useFilteredAssets } from '../context/FilterContext';
 import { STATUS } from '../constants';
 import { getStatusClass, getStatusIcon, getStatusLabel } from '../utils/assetStatus';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 
 export default function InventoryPage() {
   const { sectorAssets, stats, progress } = useInventory();
@@ -13,6 +15,16 @@ export default function InventoryPage() {
   const countBom = sectorAssets.filter(a => a.condition === 'Bom').length;
   const countRuim = sectorAssets.filter(a => a.condition === 'Ruim').length;
   const countInservivel = sectorAssets.filter(a => a.condition === 'Inservível').length;
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const handleScanSuccess = (decodedText) => {
+    setIsScannerOpen(false);
+    setSearch(decodedText);
+  };
+
+  const handleScanClose = () => {
+    setIsScannerOpen(false);
+  };
 
   return (
     <div className="fade-in">
@@ -40,6 +52,15 @@ export default function InventoryPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <button
+          type="button"
+          className="btn-icon"
+          onClick={() => setIsScannerOpen(true)}
+          title="Escanear código de barras"
+          style={{ marginLeft: '8px', flexShrink: 0 }}
+        >
+          <ScanBarcode size={20} />
+        </button>
       </div>
 
       <div className="filter-pills">
@@ -54,6 +75,13 @@ export default function InventoryPage() {
         <button className={`pill ${conditionFilter === 'Ruim' ? 'active' : ''}`} onClick={() => { setConditionFilter('Ruim'); setStatusFilter('all'); }}>Ruim ({countRuim})</button>
         <button className={`pill ${conditionFilter === 'Inservível' ? 'active' : ''}`} onClick={() => { setConditionFilter('Inservível'); setStatusFilter('all'); }}>Inservível ({countInservivel})</button>
       </div>
+
+      {isScannerOpen && (
+        <BarcodeScannerModal
+          onScanSuccess={handleScanSuccess}
+          onClose={handleScanClose}
+        />
+      )}
 
       <div>
         {filteredAssets.map(asset => (
