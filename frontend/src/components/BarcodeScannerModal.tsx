@@ -16,7 +16,7 @@ export default function BarcodeScannerModal({ onScanSuccess, onClose }: BarcodeS
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
 
-      // Initialize the scanner
+      // Initialize the scanner with rear camera
       const scanner = new Html5QrcodeScanner(
         'barcode-reader',
         {
@@ -26,6 +26,10 @@ export default function BarcodeScannerModal({ onScanSuccess, onClose }: BarcodeS
           showTorchButtonIfSupported: true,
           showZoomSliderIfSupported: true,
           defaultZoomValueIfSupported: 1.5,
+          // Use rear camera by default
+          videoConstraints: {
+            facingMode: { exact: 'environment' },
+          },
         },
         false
       );
