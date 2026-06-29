@@ -43,21 +43,44 @@ export default function InventoryPage() {
         <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
       </div>
 
-      <div className="search-container">
-        <Search className="search-icon" size={18} />
+      <div className="search-container" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <Search className="search-icon" size={18} style={{ position: 'absolute', left: '14px', pointerEvents: 'none', zIndex: 1 }} />
         <input
           type="text"
           className="text-input search-input"
           placeholder="Buscar por nome ou tombamento..."
           value={search}
           onChange={e => setSearch(e.target.value)}
+          style={{ paddingLeft: '44px', paddingRight: '52px', width: '100%' }}
         />
         <button
           type="button"
-          className="btn-icon"
           onClick={() => setIsScannerOpen(true)}
           title="Escanear código de barras"
-          style={{ marginLeft: '8px', flexShrink: 0 }}
+          style={{
+            position: 'absolute',
+            right: '8px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-muted)',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--surface-light)';
+            e.currentTarget.style.color = 'var(--primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none';
+            e.currentTarget.style.color = 'var(--text-muted)';
+          }}
         >
           <ScanBarcode size={20} />
         </button>
