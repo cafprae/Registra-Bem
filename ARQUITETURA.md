@@ -1,3 +1,5 @@
+# Arquitetura
+
 sequenceDiagram
     actor A as Auditor (Campo)
     participant RB as UI: Registra Bem
