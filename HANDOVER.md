@@ -309,24 +309,19 @@ npm run test
 
 Para o desenvolvedor ou equipe que estiver assumindo o projeto, foram identificados os seguintes pontos de atenção prioritários:
 
-### 1. 🧮 Lógica de Cálculo Duplicada no `DashboardPage.tsx`
-- **Problema:** A página [DashboardPage.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/pages/DashboardPage.tsx) possui cálculo direto das variáveis `globalConfirmed`, `globalMoved`, `globalPending`, `condBom`, `sectorStats`, etc. Esse cálculo é executado a cada render sem `useMemo` e duplica métricas que já existem no `InventoryContext`.
-- **Ação recomendada:** Centralizar os cálculos estatísticos globais em um hook ou estender o objeto `stats` no contexto, utilizando `useMemo`.
-- **Problemas adicionais na página:** 
-  - Presença de `// @ts-nocheck` no topo do arquivo.
-  - Caracteres especiais com falha de codificação em strings literais (exemplo: `'Inserv├¡vel'` em vez de `'Inservível'`, `'Sa├║de'` em vez de `'Saúde'`).
+### 1. 🧮 Otimização do `DashboardPage.tsx` (✅ Resolvido)
+- **Status:** A página [DashboardPage.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/pages/DashboardPage.tsx) foi refatorada:
+  - Os cálculos pesados foram encapsulados em `useMemo`.
+  - A diretiva `// @ts-nocheck` foi removida e a tipagem TypeScript foi completamente restabelecida.
+  - As strings acentuadas com falha de codificação foram corrigidas.
+  - A ação `openAsset` foi devidamente desacoplada para ser consumida via `useUI()`.
 
 ### 2. 🔀 Concluir a Migração dos Estados Residuais do `InventoryContext`
 - **Problema:** Para garantir compatibilidade com versões antigas dos componentes, o [InventoryContext.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/context/InventoryContext.tsx) ainda declara variáveis locais de `search`, `selectedAsset`, `newLocation`, `showAddExtra`, etc., mesmo após a criação de `UIContext` e `FilterContext`.
 - **Ação recomendada:** Remover os estados duplicados de dentro de `InventoryContext` e atualizar quaisquer componentes remanescentes para consumirem diretamente `useUI()` ou `useFilters()`.
 
-### 3. 🐛 Bug no Botão de Registrar Item Extra no `InventoryLayout.tsx`
-- **Problema:** No arquivo [InventoryLayout.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/layouts/InventoryLayout.tsx) (linhas 98 e 120), os eventos de clique estão declarados como:
-  ```tsx
-  onClick={() => openAddExtraModal}
-  ```
-  Isso não dispara a função, pois faltam os parênteses `openAddExtraModal()` ou a passagem direta `onClick={openAddExtraModal}`.
-- **Ação recomendada:** Ajustar para `onClick={openAddExtraModal}` em ambas as ocorrências.
+### 3. 🐛 Botões de Registrar Item Extra no `InventoryLayout.tsx` (✅ Resolvido)
+- **Status:** Os handlers de clique no [InventoryLayout.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/layouts/InventoryLayout.tsx) (botão da sidebar e FAB mobile) foram corrigidos para chamar diretamente a função `onClick={openAddExtraModal}`.
 
 ### 4. 🔑 Padronização do Identificador de Patrimônio (`tombamento` vs `id`)
 - **Problema:** No [AssetDetailSheet.tsx](file:///c:/Users/speed/OneDrive%20-%20Universidade%20Federal%20do%20Cear%C3%A1/Aplicativos/Registra%20Bem/frontend/src/components/AssetDetailSheet.tsx), algumas funções chamam `handleUndoRegistration(selectedAsset.tombamento)`, enquanto no estado o atributo principal mapeado é `selectedAsset.id`.

@@ -23,7 +23,7 @@ export default function InventoryLayout() {
   } = useInventory();
   const { toast, openAddExtraModal } = useUI();
 
-  const meta = PAGE_META[pathname] ?? PAGE_META['/inventory'];
+  const meta = PAGE_META[pathname as keyof typeof PAGE_META] ?? PAGE_META['/inventory'];
   const isInventory = pathname === '/inventory';
   const userEmail = session?.user?.email ?? '';
   const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : '?';
@@ -95,7 +95,7 @@ export default function InventoryLayout() {
 
             {isInventory && (
               <div className="desktop-only" style={{ marginTop: 'auto', width: '100%' }}>
-                <button className="nav-item nav-item-add" onClick={() => openAddExtraModal}>
+                <button className="nav-item nav-item-add" onClick={openAddExtraModal}>
                   <Plus size={20} /> <span className="nav-label">Registrar Item Extra</span>
                 </button>
               </div>
@@ -117,7 +117,7 @@ export default function InventoryLayout() {
       </div>
 
       {isInventory && (
-        <button className="fab mobile-only" onClick={() => openAddExtraModal} title="Registrar item extra">
+        <button className="fab mobile-only" onClick={openAddExtraModal} title="Registrar item extra">
           <Plus size={26} />
         </button>
       )}
