@@ -2,6 +2,8 @@
 
 Sistema de Auditoria e Gestão de Patrimônio Físico da **Pró-Reitoria de Assistência Estudantil (PRAE)** — **Universidade Federal do Ceará (UFC)**.
 
+O **Registra Bem** atua como o motor de dados e controle operacional de campo para o ecossistema integrado ao sistema **Racionaliza** (atendimento e chatbot via base compartilhada Supabase).
+
 ---
 
 ## 📖 Documentação de Transição e Handover

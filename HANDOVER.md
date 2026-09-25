@@ -27,6 +27,46 @@ Substituir o controle manual e planilhas desconexas por uma plataforma web centr
 - **Agente / Editor (`agente`, `editor`):** Agentes de campo que executam a verificação física, movimentação de bens e registro de itens extras.
 - **Visualizador (`viewer`):** Permissão somente-leitura (papel atribuído por padrão a novos cadastros até liberação por um administrador).
 
+### 1.1 🔄 Integração com o Ecossistema: Registra Bem & Racionaliza
+
+É fundamental compreender que o **Registra Bem** não atua de forma isolada. Ele foi concebido como o motor de dados e a infraestrutura operacional de apoio para o sistema **Racionaliza** (idealizado em 2025). Ambos os sistemas partilham o mesmo **Banco de Dados** central, criando um ciclo contínuo entre o trabalho de campo e o atendimento ao servidor.
+
+```mermaid
+graph LR
+    subgraph Campo ["Operação em Campo"]
+        RB["📥 Registra Bem<br/>(Alimentação e Controlo)"]
+    end
+
+    subgraph Backend ["Base Unificada"]
+        DB[("🗄️ Supabase<br/>(Banco de Dados Central)")]
+    end
+
+    subgraph Atendimento ["Atendimento & Gestão"]
+        RAC["📤 Racionaliza<br/>(Chatbot, Consulta & Solicitação)"]
+    end
+
+    RB -->|"Atualiza local/condição<br/>Registra movimentações"| DB
+    DB -->|"Disponibiliza status em tempo real"| RAC
+    RAC -->|"Solicitações de doação/recolhimento"| DB
+    DB -->|"Demandas para conferência"| RB
+```
+
+Com base no fluxo de arquitetura do projeto, o ecossistema divide-se nas seguintes responsabilidades:
+
+#### 📥 Registra Bem (Alimentação e Controlo Operacional)
+Atua na base da operação, garantindo que os dados da realidade física correspondam ao sistema:
+* **Atualiza:** Regista e atualiza o local exato, a condição física (*Bom*, *Ruim*, *Inservível*) e a disponibilidade do item.
+* **Movimenta:** Gere as ações de transferência entre setores, recolhimento e doação de bens.
+
+#### 🗄️ Banco de Dados (Sincronização Central)
+Atua como a ponte de comunicação bidirecional. Toda a atualização de inventário feita através do *Registra Bem* reflete-se instantaneamente na base partilhada.
+
+#### 📤 Racionaliza (Consumo, Chatbot e Gestão)
+A interface de atendimento e tomada de decisão que consome os dados tratados pelo *Registra Bem*:
+* **Consulta:** Permite que os servidores verifiquem no chatbot (Racionaliza) se o item desejado está disponível, quais são as opções e as condições do item procurado.
+* **Solicitação:** Caso o item esteja marcado como *Disponível* ou *Recolhido*, o servidor pode solicitar diretamente ao setor responsável pelo registo da doação ou ao depósito.
+* **Gerenciamento:** Permite que gestores e administradores tenham acesso rápido aos dados consolidados para avaliação e tomada de decisões na gestão dos bens da unidade.
+
 ---
 
 ## 2. 🛠️ Tech Stack & Dependências
