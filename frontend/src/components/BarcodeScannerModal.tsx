@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface BarcodeScannerModalProps {
   onScanSuccess: (decodedText: string) => void;
@@ -8,67 +8,75 @@ interface BarcodeScannerModalProps {
 }
 
 export default function BarcodeScannerModal({ onScanSuccess, onClose }: BarcodeScannerModalProps) {
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Small delay to ensure the DOM element is ready
+    // Pequeno atraso para garantir que o elemento DOM está pronto
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
 
-      // Initialize the scanner with rear camera
-      const scanner = new Html5QrcodeScanner(
-        'barcode-reader',
+      // Inicializa o leitor diretamente (sem a interface de Scanner)
+      const html5QrCode = new Html5Qrcode('barcode-reader');
+      scannerRef.current = html5QrCode;
+
+      // Inicia a câmara automaticamente
+      html5QrCode.start(
+        { facingMode: 'environment' }, // Força o uso da câmara traseira
         {
           fps: 10,
           qrbox: { width: 250, height: 150 },
           aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          showZoomSliderIfSupported: true,
-          defaultZoomValueIfSupported: 1.5,
-          // Use rear camera by default
-          videoConstraints: {
-            facingMode: { exact: 'environment' },
-          },
         },
-        false
-      );
-
-      scanner.render(
         (decodedText) => {
-          // Success callback
-          onScanSuccess(decodedText);
+          // Callback de sucesso: para a câmara e devolve o texto
+          if (html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+              onScanSuccess(decodedText);
+            }).catch(() => {
+              onScanSuccess(decodedText);
+            });
+          } else {
+            onScanSuccess(decodedText);
+          }
         },
         () => {
-          // Error callback (ignore scan errors - they happen frequently)
+          // Callback de erro (ignorar os erros frequentes de leitura de frame)
         }
-      );
-
-      scannerRef.current = scanner;
+      ).catch((err) => {
+        console.error("Erro ao iniciar a câmara:", err);
+      });
+      
     }, 100);
 
-    // Cleanup function
+    // Função de limpeza ao desmontar o componente
     return () => {
       clearTimeout(timer);
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {
-          // Ignore errors during cleanup
-        });
-        scannerRef.current = null;
+      if (scannerRef.current?.isScanning) {
+        scannerRef.current.stop().then(() => {
+          scannerRef.current?.clear();
+        }).catch(() => {});
+      } else if (scannerRef.current) {
+        scannerRef.current.clear();
       }
     };
   }, [onScanSuccess]);
 
   const handleClose = async () => {
-    // Clear the scanner before closing
-    if (scannerRef.current) {
+    // Para a câmara de forma segura antes de fechar
+    if (scannerRef.current?.isScanning) {
       try {
-        await scannerRef.current.clear();
+        await scannerRef.current.stop();
       } catch {
-        // Ignore errors during cleanup
+        // Ignorar erros durante a paragem
       }
+    }
+    
+    if (scannerRef.current) {
+      scannerRef.current.clear();
       scannerRef.current = null;
     }
+    
     onClose();
   };
 
@@ -83,9 +91,10 @@ export default function BarcodeScannerModal({ onScanSuccess, onClose }: BarcodeS
           </button>
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '20px' }}>
-          Aponte a câmera para o código de barras do patrimônio.
+          Aponte a câmara para o código de barras do património.
         </p>
         
+        {/* Adicionei position relative para garantir que o vídeo não fuja do container */}
         <div 
           id="barcode-reader" 
           ref={containerRef}
@@ -94,7 +103,8 @@ export default function BarcodeScannerModal({ onScanSuccess, onClose }: BarcodeS
             minHeight: '300px',
             borderRadius: '12px',
             overflow: 'hidden',
-            border: '1px solid var(--glass-border)'
+            border: '1px solid var(--glass-border)',
+            position: 'relative'
           }}
         />
         

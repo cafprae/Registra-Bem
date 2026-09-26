@@ -93,7 +93,7 @@ A aplicação foi construída sobre uma arquitetura frontend moderna e desacopla
 
 Anteriormente, o sistema utilizava um único `InventoryContext` monolítico que acumulava regras de negócio, chamadas ao Supabase, estado de modais, inputs de formulário e filtros de busca. 
 
-Para eliminar re-renderizações desnecessárias e organizar as responsabilidades, foi realizada uma refatoração dividindo a gestão em **3 Contextos Especializados**:
+Para eliminar re-renderizações desnecessárias e organizar as responsabilidades, foi realizada uma refatoração dividindo a gestão em **3 Contextos Especializados** (consulte também o documento dedicado com diagramas e fluxos em [ARQUITETURA.md](./ARQUITETURA.md)):
 
 ```
 [ App.tsx ]

@@ -10,7 +10,8 @@ O **Registra Bem** atua como o motor de dados e controle operacional de campo pa
 
 Para uma explicação detalhada da arquitetura, divisão dos contextos (`InventoryContext`, `UIContext`, `FilterContext`), funcionalidades, banco de dados Supabase, deploy na Vercel e dívida técnica pendente, consulte o documento:
 
-👉 **[HANDOVER.md](./HANDOVER.md)**
+👉 **[HANDOVER.md](./HANDOVER.md)** — Relatório de Transição & Handover  
+👉 **[ARQUITETURA.md](./ARQUITETURA.md)** — Diagramas e Decisões de Arquitetura Técnica
 
 ---
 
