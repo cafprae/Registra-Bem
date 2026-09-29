@@ -69,7 +69,8 @@ graph TD
     DashPage -.-> useInventory
 ```
 
-### Responsabilidade de Cada Camada:
+### Responsabilidade de Cada Camada
+
 1. **`UIContext`**: Estados visuais voláteis (`isDetailSheetOpen`, `selectedAsset`, `toast`, inputs temporários de modal). Mudanças de digitação em formulários não disparam re-render nas listas de patrimônio.
 2. **`FilterContext`**: Termo de busca e pílulas de filtro (`search`, `statusFilter`, `conditionFilter`). O hook utilitário `useFilteredAssets(sectorAssets)` memoiza a lista filtrada.
 3. **`InventoryContext`**: Regras de negócio persistidas, comunicação direta com o Supabase e sincronização da coleção de bens (`assets`).
