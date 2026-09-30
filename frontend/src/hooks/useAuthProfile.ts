@@ -44,6 +44,11 @@ export function useAuthProfile(supabaseClient: SupabaseClient = defaultSupabase)
       if (!initialSession) {
         setAuthLoading(false);
       }
+    }).catch((err) => {
+      console.error('Erro inesperado ao verificar sessão:', err);
+      if (isMounted) {
+        setAuthLoading(false);
+      }
     });
 
     // Subscrição a eventos de mudança de autenticação
