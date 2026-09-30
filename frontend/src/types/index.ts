@@ -103,7 +103,7 @@ export interface UIState {
 export interface UIActions {
   openAsset: (asset: Asset) => void;
   closeDetailSheet: () => void;
-  setSelectedAsset: (asset: Asset | null) => void;
+  setSelectedAsset: Dispatch<SetStateAction<Asset | null>>;
   setNewLocation: Dispatch<SetStateAction<string>>;
   setNewSector: Dispatch<SetStateAction<string>>;
   openAddExtraModal: () => void;

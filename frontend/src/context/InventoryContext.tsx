@@ -7,7 +7,7 @@ import { useAssets } from '../hooks/useAssets';
 import { useAuthProfile } from '../hooks/useAuthProfile';
 import { useUI } from './UIContext';
 import { useFilters } from './FilterContext';
-import type { InventoryContextType } from '../types';
+import type { AssetStatus, InventoryContextType } from '../types';
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
 
@@ -18,13 +18,18 @@ export function InventoryProvider({ children }) {
   // Subscribe to UI and filter contexts to access their state/actions
   const ui = useUI();
   const filters = useFilters();
+  const {
+    selectedAsset, setSelectedAsset,
+    newLocation, setNewLocation,
+    isSectorChangeOpen: showSectorChange,
+    closeSectorChange,
+    newSector, setNewSector,
+  } = ui;
 
   const sector = profile?.sector ?? null;
   const sectorStorage = getSectorStorageValue(sector);
 
   const [search, setSearch] = useState('');
-  const [selectedAsset, setSelectedAsset] = useState(null);
-  const [newLocation, setNewLocation] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [conditionFilter, setConditionFilter] = useState('all');
   const [showAddExtra, setShowAddExtra] = useState(false);
@@ -33,8 +38,6 @@ export function InventoryProvider({ children }) {
   const [extraLocation, setExtraLocation] = useState('');
   const [toast, setToast] = useState(null);
   const [reportTab, setReportTab] = useState('missing');
-  const [showSectorChange, setShowSectorChange] = useState(false);
-  const [newSector, setNewSector] = useState('');
 
   const sectors = useMemo(() => {
     const unique = [...new Set(assets.map(a => a.sector))].sort();
@@ -86,8 +89,8 @@ export function InventoryProvider({ children }) {
     }
     const previousAssets = assets;
     const previousSelected = selectedAsset;
-    const newStatus = (selectedAsset.location && selectedAsset.location !== selectedAsset.originalLocation)
-      ? STATUS.MOVED : STATUS.CONFIRMED;
+    const newStatus: AssetStatus = (selectedAsset.location && selectedAsset.location !== selectedAsset.originalLocation)
+      ? STATUS.MOVED as AssetStatus : STATUS.CONFIRMED as AssetStatus;
 
     try {
       const { error } = await supabase.from('tabela_inicial')
@@ -119,7 +122,8 @@ export function InventoryProvider({ children }) {
       from: selectedAsset.location || 'Não definido',
       to: newLocation
     };
-    const newStatus = (newLocation === selectedAsset.originalLocation) ? STATUS.CONFIRMED : STATUS.MOVED;
+    const newStatus: AssetStatus = (newLocation === selectedAsset.originalLocation)
+      ? STATUS.CONFIRMED as AssetStatus : STATUS.MOVED as AssetStatus;
 
     try {
       const { error } = await supabase.from('tabela_inicial')
@@ -150,7 +154,6 @@ export function InventoryProvider({ children }) {
     const previousAssets = assets;
     const previousSelected = selectedAsset;
     const previousNewSector = newSector;
-    const previousShowSectorChange = showSectorChange;
     const logEntry = {
       date: new Date().toLocaleString('pt-BR'),
       from: `Divisão: ${selectedAsset.sector}`,
@@ -166,14 +169,12 @@ export function InventoryProvider({ children }) {
       setAssets(prev => prev.map(a =>
         a.id === selectedAsset.id ? { ...a, sector: newSector, status: STATUS.MOVED, logs: [logEntry, ...a.logs] } : a
       ));
-      setSelectedAsset(prev => ({ ...prev, sector: newSector, status: STATUS.MOVED, logs: [logEntry, ...prev.logs] }));
-      setShowSectorChange(false);
-      setNewSector('');
+      setSelectedAsset(prev => ({ ...prev, sector: newSector, status: STATUS.MOVED as AssetStatus, logs: [logEntry, ...prev.logs] }));
+      closeSectorChange();
       showToast('Divisão alterada!');
     } catch (e) {
       console.error('Erro BD', e);
       setNewSector(previousNewSector);
-      setShowSectorChange(previousShowSectorChange);
       rollbackAssetChange(previousAssets, previousSelected);
     }
   };
@@ -220,7 +221,7 @@ export function InventoryProvider({ children }) {
       // Update frontend state after successful DB update
       setAssets(prev => prev.map(a => a.id === tombamento ? { ...a, condition: '', location: '', status: STATUS.PENDING } : a));
       if (selectedAsset && selectedAsset.id === tombamento) {
-        setSelectedAsset(prev => ({ ...prev, condition: '', location: '', status: STATUS.PENDING }));
+        setSelectedAsset(prev => ({ ...prev, condition: '', location: '', status: STATUS.PENDING as AssetStatus }));
       }
 
       showToast('Registro desfeito!');
@@ -245,7 +246,7 @@ export function InventoryProvider({ children }) {
 
       setAssets(prev => prev.map(a => a.id === tombamento ? { ...a, validation: 'Confirmada', status: STATUS.CONFIRMED } : a));
       if (selectedAsset && selectedAsset.id === tombamento) {
-        setSelectedAsset(prev => ({ ...prev, validation: 'Confirmada', status: STATUS.CONFIRMED }));
+        setSelectedAsset(prev => ({ ...prev, validation: 'Confirmada', status: STATUS.CONFIRMED as AssetStatus }));
       }
       showToast('Recebimento confirmado!');
     } catch (e) {
@@ -380,7 +381,7 @@ export function InventoryProvider({ children }) {
     stats, progress,
     selectedAsset, setSelectedAsset, openAsset,
     newLocation, setNewLocation,
-    showSectorChange, setShowSectorChange, newSector, setNewSector,
+    showSectorChange, newSector, setNewSector,
     showAddExtra, setShowAddExtra,
     extraTombamento, setExtraTombamento, extraName, setExtraName, extraLocation, setExtraLocation,
     reportTab, setReportTab,
