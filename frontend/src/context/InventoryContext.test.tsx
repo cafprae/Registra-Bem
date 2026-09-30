@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   useAssets: vi.fn(),
   useUI: vi.fn(),
   useFilters: vi.fn(),
+  setAssets: vi.fn(),
   from: vi.fn(),
   update: vi.fn(),
   eq: vi.fn(),
@@ -31,7 +32,7 @@ const asset = {
   location: '',
   originalLocation: '',
   status: 'pending',
-  condition: '',
+  condition: 'Bom',
   isExtra: false,
   logs: [],
 };
@@ -67,7 +68,7 @@ describe('InventoryProvider asset actions', () => {
       isAdmin: false,
       isAuthorized: true,
     });
-    mocks.useAssets.mockReturnValue({ assets: [asset], setAssets: vi.fn() });
+    mocks.useAssets.mockReturnValue({ assets: [asset], setAssets: mocks.setAssets });
     mocks.useUI.mockReturnValue(uiContext);
     mocks.useFilters.mockReturnValue({});
     mocks.from.mockReturnValue({ update: mocks.update });
@@ -106,5 +107,22 @@ describe('InventoryProvider asset actions', () => {
     expect(mocks.eq).toHaveBeenCalledWith('tombamento', asset.id);
     expect(uiContext.setSelectedAsset).toHaveBeenCalled();
     expect(uiContext.closeSectorChange).toHaveBeenCalled();
+  });
+
+  it('undoes registration without clearing the asset condition or sending null values', async () => {
+    await act(async () => {
+      await inventoryContext.handleUndoRegistration(asset.id);
+    });
+
+    expect(mocks.update).toHaveBeenCalledWith({ local_exato_ambiente: '', situacao: 'Pendente' });
+    expect(Object.values(mocks.update.mock.calls[0][0]).every(value => value !== null)).toBe(true);
+    expect(mocks.eq).toHaveBeenCalledWith('tombamento', asset.id);
+
+    const updateAssets = mocks.setAssets.mock.calls[0][0];
+    const updatedAsset = updateAssets([asset])[0];
+    expect(updatedAsset).toMatchObject({ condition: 'Bom', location: '', status: 'pending' });
+
+    const updateSelectedAsset = uiContext.setSelectedAsset.mock.calls[0][0];
+    expect(updateSelectedAsset(asset)).toMatchObject({ condition: 'Bom', location: '', status: 'pending' });
   });
 });

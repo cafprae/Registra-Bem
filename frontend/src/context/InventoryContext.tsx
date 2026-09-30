@@ -214,14 +214,14 @@ export function InventoryProvider({ children }) {
     try {
       // Persist reset to DB first to avoid triggering frontend auto-saves
       const { error } = await supabase.from('tabela_inicial')
-        .update({ condicao: null, local_exato_ambiente: null, situacao: 'Pendente' })
+        .update({ local_exato_ambiente: '', situacao: 'Pendente' })
         .eq('tombamento', tombamento);
       if (error) throw error;
 
       // Update frontend state after successful DB update
-      setAssets(prev => prev.map(a => a.id === tombamento ? { ...a, condition: '', location: '', status: STATUS.PENDING } : a));
+      setAssets(prev => prev.map(a => a.id === tombamento ? { ...a, location: '', status: STATUS.PENDING } : a));
       if (selectedAsset && selectedAsset.id === tombamento) {
-        setSelectedAsset(prev => ({ ...prev, condition: '', location: '', status: STATUS.PENDING as AssetStatus }));
+        setSelectedAsset(prev => ({ ...prev, location: '', status: STATUS.PENDING as AssetStatus }));
       }
 
       showToast('Registro desfeito!');
