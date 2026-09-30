@@ -81,7 +81,7 @@ export function useAuthProfile(supabaseClient: SupabaseClient = defaultSupabase)
       // Otimização da consulta: busca apenas as colunas necessárias para o contexto
       const { data, error } = await supabaseClient
         .from('profiles')
-        .select('id, full_name, role, sector, updated_at')
+        .select('id, full_name, role, sector')
         .eq('id', targetUserId)
         .single();
 

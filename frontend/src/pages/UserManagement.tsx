@@ -30,7 +30,7 @@ export default function UserManagement() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, sector')
         .order('updated_at', { ascending: false });
       if (error) throw error;
       setAllUsers(data || []);

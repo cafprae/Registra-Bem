@@ -77,7 +77,7 @@ describe('useAuthProfile hook', () => {
     });
 
     expect(fromMock).toHaveBeenCalledWith('profiles');
-    expect(selectMock).toHaveBeenCalledWith('id, full_name, role, sector, updated_at');
+    expect(selectMock).toHaveBeenCalledWith('id, full_name, role, sector');
     expect(eqMock).toHaveBeenCalledWith('id', 'user-123');
     expect(screen.getByTestId('role').textContent).toBe('admin');
     expect(screen.getByTestId('isAdmin').textContent).toBe('admin');
